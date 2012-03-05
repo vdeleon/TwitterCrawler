@@ -134,5 +134,6 @@ class DatabaseManager(object):
         query.exec_()       
     
 if __name__ == "__main__":
+    '''used for debug'''
     db = DatabaseManager()
     db.deleteLastSearch()
