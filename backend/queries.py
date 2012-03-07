@@ -35,6 +35,11 @@ table_links = '''CREATE TABLE "links" (
     "address" TEXT NOT NULL 
 )'''
 
+table_options = '''CREATE TABLE "options" (
+    "key" TEXT,
+    "value" TEXT
+)'''
+
 delete_search = '''DELETE FROM searches WHERE id=:id'''
 
 add_search_step = '''UPDATE "searches" 
