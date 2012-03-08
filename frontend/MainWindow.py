@@ -10,3 +10,4 @@ from PySide.QtGui import *
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
+        self.showFullScreen()
