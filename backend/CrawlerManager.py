@@ -13,11 +13,18 @@ CONSUMER_KEY = ""
 CONSUMER_SECRET = ""
 
 class CrawlerManager(QObject):
-    def __init__(self):
+    def __init__(self, db):
         self.rest = None
         self.streaming = None
         self.auth = None
-        self.db = DatabaseManager()
+        self.db = db
+        self.rest.dataReady.connect(self.saveResults)
+        self.streaming.dataReady.connect(self.saveResults)
+        self.dataReady = Signal(SearchStep)
+        
+    @Slot(SearchStep)
+    def saveResults(self, step):
+        self.dataReady.emit(step)
     
     def getAuthUrl(self):
         self.auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
@@ -40,10 +47,6 @@ class CrawlerManager(QObject):
         self.rest = RestCrawler(self.auth)
         self.streaming = StreamingCrawler(self.auth)
         return True
-    
-    def saveResults(self, results):
-        '''slot called when results are ready to save'''
-        pass
     
     def trackTweetsInsideArea(self, lat, long, width, height):
         '''Get tweets inside the given bounding box'''
