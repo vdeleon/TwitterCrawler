@@ -4,7 +4,7 @@ Created on 10/mar/2012
 @author: Riccardo Ferrazzo <f.riccardo87@gmail.com>
 '''
 from PySide.QtCore import *
-from CrawlerManager import CrawlerManager
+from Crawler import Crawler
 from Database import *
 from Base import *
 
@@ -13,7 +13,7 @@ class SearchManager(QObject):
         self.search = None
         self.step = 0
         self.db = DatabaseManager()
-        self.crawler = CrawlerManager(self.db)
+        self.crawler = Crawler(self.db)
     
     def createSearch(self):
         self.search = Search()
