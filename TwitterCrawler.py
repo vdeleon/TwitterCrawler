@@ -20,6 +20,11 @@ class Controller(QObject):
     def _loginUrl(self):
         return self.sm.crawler.getAuthUrl()
     
+    @Slot(str)
+    def loginWithCode(self, code):
+        self.sm.crawler.setAuthAccess(code)
+        self.sm.crawler.login()
+    
     @Signal
     def changed(self):
         pass
@@ -37,6 +42,7 @@ if __name__ == "__main__":
     view.setResizeMode(QDeclarativeView.SizeRootObjectToView)
     root = view.rootContext()
     controller = Controller()
+    
     root.setContextProperty('controller', controller)
     view.setSource(os.path.join(frontend, "frontend.qml"))
     view.show()
