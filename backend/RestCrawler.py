@@ -10,6 +10,7 @@ from tweepy.models import SearchResult
 
 class RestCrawler(QObject):
     def __init__(self, auth=None):
+        QObject.__init__(self, None)
         self.__enabled = True
         self.rest = rest(auth)
         self.dataReady = Signal(SearchStep)

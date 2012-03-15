@@ -16,10 +16,12 @@ PageStack{
         url: controller.loginUrl
         onCodeRecived: {
             controller.loginWithCode(auth)
+            root.pop();
         }
     }
 
     Component.onCompleted: {
+        root.push(defaultView)
         if(!controller.loggedIn){
             root.push(authDialog);
         }

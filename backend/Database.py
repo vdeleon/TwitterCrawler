@@ -139,7 +139,6 @@ class DatabaseManager(object):
         query.prepare("INSERT INTO options(key, value) VALUES(:key, :value)")
         query.bindValue(":key", key)
         query.bindValue(":value", value)
-        print "added"
         query.exec_()
     
     def getOption(self, key):
