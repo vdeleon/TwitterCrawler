@@ -3,18 +3,33 @@ import QtQuick 1.1
 import QtWebKit 1.0
 
 View{
-    Column{
-        anchors.fill: parent
-        spacing: 20
+    id: authDialog
+    property string url: "http://www.google.it"
+    Flickable{
+        id: webFlick
+        width: parent.width
+        height: 400
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.left: parent.left
+        flickableDirection: Flickable.VerticalFlick
+        contentHeight: webView.height
+        clip: true
         WebView{
-            height: 400
-            width: parent.width
-            url: "http://www.google.it"
+            id: webView
+            preferredWidth: parent.width
+            preferredHeight: 400
+            url: authDialog.url
         }
-        Rectangle{
-            color: "#000"
-            height: 100
-            width: parent.width
-        }
+    }
+    ScrollBar {
+        target: webFlick
+    }
+    Rectangle{
+        color: "#000"
+        anchors.top: webFlick.bottom
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        anchors.left: parent.left
     }
 }

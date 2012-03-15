@@ -3,7 +3,7 @@ Created on 05/mar/2012
 
 @author: Riccardo Ferrazzo <f.riccardo87@gmail.com>
 '''
-import tweepy.API as rest
+from tweepy import API as rest
 from Base import *
 from PySide.QtCore import *
 from tweepy.models import SearchResult
@@ -28,7 +28,7 @@ class RestCrawler(QObject):
         results = self.rest.search(geocode=string, include_entities=True)
         sStep = SearchStep()
         for res in results:
-            tweet = Tweet(user=User(res.from_user, res.from_user_id), res.created_at, res.location)
+            tweet = Tweet(user=User(res.from_user, res.from_user_id), time=res.created_at, location=res.location)
             for u in res.entities["urls"]:
                 tweet.links.append(u["expanded_url"])
             for h in res.entities["hashtags"]:

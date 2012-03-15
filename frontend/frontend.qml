@@ -3,7 +3,11 @@ import QtQuick 1.1
 
 StackedView{
     id: mainView
-    children: [
-        AuthDialog{visible: true}
-    ]
+    children: []
+    Component.onCompleted: {
+        if(!controller.loggedIn){
+            var obj = mainView.addAndPush("AuthDialog.qml", "authDialog");
+            obj.url = controller.loginUrl;
+        }
+    }
 }
