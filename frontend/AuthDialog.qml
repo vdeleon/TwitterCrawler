@@ -9,24 +9,25 @@ View{
     ScrollArea{
         id: webFlick
         width: parent.width
-        height: 400
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.left: parent.left
+        anchors.bottom: btns.top
         contentHeight: webView.height
         clip: true
         WebView{
             id: webView
-            preferredWidth: parent.width
-            preferredHeight: 400
+            preferredWidth: 850
+            preferredHeight: parent.height
             url: authDialog.url
         }
     }
     Rectangle{
-        anchors.top: webFlick.bottom
+        id: btns
         anchors.bottom: parent.bottom
         anchors.right: parent.right
         anchors.left: parent.left
+        height: 100
         Row{
             anchors.centerIn: parent
             Label{
