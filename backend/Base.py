@@ -10,7 +10,7 @@ class User(object):
         self.id = id
         self.db_id = None
         self.followers = []
-    
+        
 class Tweet(object):
     def __init__(self, user=None, time=None, location=None, hashtags = [], links = []):
         self.user = user
@@ -23,16 +23,3 @@ class SearchStep(object):
     def __init__(self, users=[], tweets=[]):
         self.users = users
         self.tweets = tweets
-        
-class Search(object):
-    def __init__(self):
-        self.steps = []
-        
-    def getStepNumbers(self):
-        return len(self.steps)
-    
-    def getStep(self, number):
-        return self.steps[number]
-    
-    def addStep(self):
-        self.steps.append(SearchStep())

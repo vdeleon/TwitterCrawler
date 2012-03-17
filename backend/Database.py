@@ -24,10 +24,9 @@ class QDbException(Exception):
         return self.msg
 
 class DatabaseManager(object):
-    def __init__(self, dbFolder="."):
+    def __init__(self):
         self.db = QSqlDatabase.addDatabase("QSQLITE")
-        dbName = os.path.join(dbFolder, "twittercrawler.db")
-        self.db.setDatabaseName(dbName)
+        self.db.setDatabaseName(":memory:")
         if not self.db.open():
             raise QDbException(self.db.lastError())
         self.createDbStructure()
@@ -43,7 +42,6 @@ class DatabaseManager(object):
             query.exec_(table_locations)
             query.exec_(table_hashtags)
             query.exec_(table_links)
-            query.exec_(table_options)
             
     def deleteOrphans(self):
         query = QSqlQuery()
@@ -53,12 +51,19 @@ class DatabaseManager(object):
         query.exec_("DELETE FROM hashtags WHERE user NOT IN (SELECT distinct id from users)")
         query.exec_("DELETE FROM links WHERE user NOT IN (SELECT distinct id from users)")
         
+    def __getLastSearchId(self):
+        query = QSqlQuery()
+        query.exec_("SELECT max(id) FROM searches")
+        query.first()
+        return query.value(0)
+        
     def createSearch(self, descr):
         query = QSqlQuery()
         query.prepare("INSERT INTO searches(date, descr) VALUES(:date, :descr)")
         query.bindValue(":date", int(time()))
         query.bindValue(":descr", descr)
         query.exec_()
+        return self.__getLastSearchId()
                 
     def deleteSearch(self, search_id):
         query = QSqlQuery()
@@ -68,10 +73,7 @@ class DatabaseManager(object):
         self.deleteOrphans()
         
     def deleteLastSearch(self):
-        query = QSqlQuery()
-        query.exec_("SELECT max(id) FROM searches")
-        query.first()
-        self.deleteSearch(query.value(0))
+        self.deleteSearch(self.__getLastSearchId())
     
     def addSearchStep(self, search_id):
         query = QSqlQuery()
@@ -132,28 +134,6 @@ class DatabaseManager(object):
         query.prepare("INSERT INTO links(user, address) VALUES(:user, :address)")
         query.bindValue(":user", user_id)
         query.bindValue(":address", address)
-        query.exec_()
-        
-    def addOption(self, key, value):
-        query = QSqlQuery()
-        query.prepare("INSERT INTO options(key, value) VALUES(:key, :value)")
-        query.bindValue(":key", key)
-        query.bindValue(":value", value)
-        query.exec_()
-    
-    def getOption(self, key):
-        query = QSqlQuery()
-        query.prepare("SELECT value FROM options WHERE key=:key")
-        query.bindValue(":key", key)
-        query.exec_()
-        if query.next():
-            return query.value(0)
-        raise Exception("Key not found")
-    
-    def deleteOption(self, key):       
-        query = QSqlQuery()
-        query.prepare("DELETE FROM options WHERE key=:key")
-        query.bindValue(":key", key)
         query.exec_()
     
 if __name__ == "__main__":

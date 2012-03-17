@@ -13,21 +13,26 @@ class SearchManager(QObject):
         self.search = None
         self.step = 0
         self.db = DatabaseManager()
-        self.crawler = Crawler(self.db)
+        self.crawler = Crawler()
     
     def createSearch(self):
-        self.search = Search()
-        self.step = 0
+        self.search = self.db.createSearch("Temp")
         
     def addSearchStep(self):
-        self.search.addStep()
+        self.db.addSearchStep(self.search)
     
     @Slot(SearchStep)
     def mergeStep(self, step):
         for u in step.users:
-            self.search.steps[step].users.append(u)
+            self.db.addUser(u.id, u.name, self.search, self.step)
+            for f in u.followers:
+                self.db.addFollower(f.id, f.name, self.search, self.step, self.db.getUserId(t_screen_name=u.name))
         for t in step.tweets:
-            self.search.steps[step].tweets.append(t)
-            
-    def saveCurrentSearch(self, name):
-        pass
+            self.db.addUser(t.user.id, t.user.name, self.search, self.step)
+            userId = self.db.getUserId(t_screen_name=t.user.name)
+            if t.location != None:
+                self.db.addLocation(userId, t.time, t.location[0], t.location[1])
+            for tag in t.hashtags:
+                self.db.addHashtag(userId, tag)
+            for link in t.links:
+                self.db.addLink(userId, link)
