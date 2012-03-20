@@ -17,8 +17,8 @@ View{
         clip: true
         WebView{
             id: webView
-            preferredWidth: 850
-            preferredHeight: parent.height
+            width: webFlick.width-15
+            //preferredHeight: parent.height
             url: authDialog.url
         }
     }

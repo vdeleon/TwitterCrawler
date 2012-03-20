@@ -8,7 +8,7 @@ Item {
     Rectangle{
         anchors.fill: parent
         color: "#000"
-        opacity: 0.4
+        opacity: 0.5
         radius: 5
     }
 }

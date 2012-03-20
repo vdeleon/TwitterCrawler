@@ -25,9 +25,14 @@ class RestCrawler(QObject):
         self.__enabled = True
         
     def getPlaceCoordinates(self, name):
-        self.rest.geo_search(query=name)
-        '''TODO: get search result'''
-        pass
+        results = self.rest.geo_search(query=name)
+        coordinates = None
+        for place in results["result"]["places"]:
+            if place["name"] == name:
+                coordinates = place["coordinates"]
+        if coordinates == None:
+            coordinates = results["result"]["places"][0]["coordinates"]
+        return (coordinates[1], coordinates[0])
     
     def getTweetsInsideArea(self, lat, long, radius):
         string = "%f,%f,%fmi" % (lat, long, radius)
@@ -58,7 +63,9 @@ if __name__ == "__main__":
     import pprint as p
     crawler = RestCrawler()
     string = "%f,%f,%fmi" % (45.6426657, 12.623754, 5)
-    res = crawler.rest.search(geocode=string, include_entities=True)
-    for r in res:
-        p.pprint(r.__getstate__())
+    #res = crawler.rest.search(geocode=string, include_entities=True)
+    res = crawler.rest.geo_search(query="Treviso")
+    
+    print res["result"]["places"]
+    #p.pprint(res.__getstate__())
     
