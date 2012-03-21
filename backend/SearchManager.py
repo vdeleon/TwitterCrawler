@@ -10,16 +10,20 @@ from Base import *
 
 class SearchManager(QObject):
     def __init__(self):
+        QObject.__init__(self)
         self.search = None
         self.step = 0
         self.db = DatabaseManager()
         self.crawler = Crawler()
+        self.crawler.dataReady.connect(self.mergeStep)
     
     def createSearch(self):
         self.search = self.db.createSearch("Temp")
+        self.step = 0
         
     def addSearchStep(self):
         self.db.addSearchStep(self.search)
+        self.step+=1
     
     @Slot(SearchStep)
     def mergeStep(self, step):

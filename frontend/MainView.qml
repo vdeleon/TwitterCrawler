@@ -5,7 +5,10 @@ import QtMobility.location 1.2
 
 View{
     id: mainView
+    property string search: "None"
+    property string step: "0"
     signal newSearch()
+    signal startMapSearch(variant lat1, variant long1, variant lat2, variant long2)
     function addMenuItem(qml, personalize){
         var component = Qt.createComponent(qml);
         var sprite = component.createObject(clumn, personalize);
@@ -40,12 +43,12 @@ View{
             }
             Text{
                 color: "white"
-                text: "Search: None"
+                text: "Search: "+mainView.search
             }
             Text{
                 id: step
                 color: "white"
-                text: "SearchStep: 0"
+                text: "SearchStep: "+mainView.step
             }
             ToolButton{
                 id: newSearch
@@ -91,6 +94,14 @@ View{
                 visible: false
                 onMapEnabler: {
                     map.enabled = enabled;
+                }
+                onStartSearch: {
+                    if(selectedRegion.topLeft.latitude != selectedRegion.bottomRight.latitude){
+                        mainView.startMapSearch(selectedRegion.topLeft.latitude,
+                                                selectedRegion.topLeft.longitude,
+                                                selectedRegion.bottomRight.latitude,
+                                                selectedRegion.bottomRight.longitude)
+                    }
                 }
             }
             HashMenu{
@@ -168,6 +179,14 @@ View{
         }
         MapRectangle {
             id: selectedRegion
+            topLeft: Coordinate {
+                latitude: 0
+                longitude: 0
+            }
+            bottomRight: Coordinate {
+                latitude: 0
+                longitude: 0
+            }
             border.color: "green"
             border.width: 3
         }

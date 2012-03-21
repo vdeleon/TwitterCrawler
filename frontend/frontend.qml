@@ -9,6 +9,14 @@ PageStack{
 
     MainView{
         id: defaultView
+        search: controller.search
+        step: controller.step
+        onNewSearch: {
+            controller.createNewSearch();
+        }
+        onStartMapSearch: {
+            controller.startMapSearch(lat1, long1, lat2, long2);
+        }
     }
 
     AuthDialog{

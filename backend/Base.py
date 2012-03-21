@@ -3,6 +3,7 @@ Created on 09/mar/2012
 
 @author: Riccardo Ferrazzo <f.riccardo87@gmail.com>
 '''
+from PySide.QtCore import *
 
 class User(object):
     def __init__(self, name=None, id=None):
@@ -23,3 +24,10 @@ class SearchStep(object):
     def __init__(self, users=[], tweets=[]):
         self.users = users
         self.tweets = tweets
+
+class MyThread(QThread):
+    def __init__(self, parent=None):
+        QThread.__init__(self, parent)
+        
+    def run(self):
+        self.exec_()

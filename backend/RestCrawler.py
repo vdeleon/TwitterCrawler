@@ -4,16 +4,20 @@ Created on 05/mar/2012
 @author: Riccardo Ferrazzo <f.riccardo87@gmail.com>
 '''
 from tweepy import API as rest
+from tweepy.error import *
 from Base import *
 from PySide.QtCore import *
-from tweepy.models import SearchResult
 
 class RestCrawler(QObject):
+    
+    dataReady = Signal(SearchStep)
+    
     def __init__(self, auth=None):
-        QObject.__init__(self, None)
+        QObject.__init__(self)
         self.__enabled = True
         self.rest = rest(auth)
-        self.dataReady = Signal(SearchStep)
+        #self.signal = SearchSignal()
+        self.known_locations = {}
     
     def disable(self):
         self.__enabled = False
@@ -25,24 +29,37 @@ class RestCrawler(QObject):
         self.__enabled = True
         
     def getPlaceCoordinates(self, name):
-        results = self.rest.geo_search(query=name)
-        coordinates = None
-        for place in results["result"]["places"]:
-            if place["name"] == name:
-                coordinates = place["coordinates"]
-        if coordinates == None:
-            coordinates = results["result"]["places"][0]["coordinates"]
-        return (coordinates[1], coordinates[0])
+        if name in self.known_locations:
+            return self.known_locations[name]
+        try:
+            results = self.rest.geo_search(query=name)
+            coordinates = None
+            if len(results["result"]["places"]) == 0:
+                coordinates = (None, None)
+            for place in results["result"]["places"]:
+                if place["name"] == name:
+                    coordinates = place["bounding_box"]["coordinates"][0][0]
+            if coordinates == None:
+                coordinates = results["result"]["places"][0]["bounding_box"]["coordinates"][0][0]
+            self.known_locations[name] = (coordinates[1], coordinates[0])
+            return (coordinates[1], coordinates[0])
+        except TweepError as e:
+            print e.resp
+            return (None, None)
     
+    @Slot(float, float, float)
     def getTweetsInsideArea(self, lat, long, radius):
+        print QThread.currentThread()
         string = "%f,%f,%fmi" % (lat, long, radius)
-        results = self.rest.search(geocode=string, include_entities=True)
+        results = self.rest.search(geocode=string, include_entities=True, rpp=100)
         sStep = SearchStep()
         for res in results:
             if res.geo == None:
                 (tlat, tlong) = self.getPlaceCoordinates(res.location)
             else:
                 (tlat, tlong) = res.geo["coordinates"]
+            if tlat == None:
+                continue;
             tweet = Tweet(user=User(res.from_user, res.from_user_id), time=res.created_at, location=(tlat, tlong))
             for u in res.entities["urls"]:
                 tweet.links.append(u["expanded_url"])
@@ -67,5 +84,6 @@ if __name__ == "__main__":
     res = crawler.rest.geo_search(query="Treviso")
     
     print res["result"]["places"]
+    print res["result"]["places"][0]["bounding_box"]["coordinates"][0][0]
     #p.pprint(res.__getstate__())
     
