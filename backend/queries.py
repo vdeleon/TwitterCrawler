@@ -40,8 +40,6 @@ table_options = '''CREATE TABLE "options" (
     "value" TEXT
 )'''
 
-delete_search = '''DELETE FROM searches WHERE id=:id'''
-
 add_search_step = '''UPDATE "searches" 
-SET "total_steps"=(SELECT "total_steps" FROM "searches" WHERE "id"=:ida)+1 
-WHERE "id"=:idb'''
+SET "total_steps"=(SELECT "total_steps" FROM "searches" WHERE "id"=?)+1 
+WHERE "id"=?'''

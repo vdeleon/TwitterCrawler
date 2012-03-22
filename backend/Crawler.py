@@ -19,16 +19,14 @@ class Crawler(QObject):
     def __init__(self):
         QObject.__init__(self)
         self.rest = None
-        self.restThread = MyThread()
         self.streaming = None
         self.auth = None
         self.settings = QSettings("rferrazz", "TwitterCrawler")
+        self.threadPool = []
         #self.signal = SearchSignal()
         
     def authInit(self):
         self.rest = RestCrawler(self.auth)
-        self.rest.moveToThread(self.restThread)
-        self.restThread.start()
         self.streaming = StreamingCrawler(self.auth)
         self.rest.dataReady.connect(self.saveResults)
         QObject.connect(self.streaming, SIGNAL('dataReady(object)'), self.saveResults)
@@ -72,6 +70,6 @@ class Crawler(QObject):
         if self.rest.isEnabled():
             (latc, longc) = (lat+(width/2), lon+(height/2))
             radius = (height/2)*69.09
-            print QThread.currentThread()
-            self.restThread.getTweetsInsideArea(latc, longc, radius)
+            self.threadPool.append(MyThread(self.rest.getTweetsInsideArea, latc, longc, radius))
+            self.threadPool[-1].start()
         self.streaming.trackTweetsInsideArea(lat1, lon1, lat2, lon2)

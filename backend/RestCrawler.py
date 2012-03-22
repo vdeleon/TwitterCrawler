@@ -49,7 +49,6 @@ class RestCrawler(QObject):
     
     @Slot(float, float, float)
     def getTweetsInsideArea(self, lat, long, radius):
-        print QThread.currentThread()
         string = "%f,%f,%fmi" % (lat, long, radius)
         results = self.rest.search(geocode=string, include_entities=True, rpp=100)
         sStep = SearchStep()

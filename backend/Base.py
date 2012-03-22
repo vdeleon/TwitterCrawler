@@ -26,8 +26,10 @@ class SearchStep(object):
         self.tweets = tweets
 
 class MyThread(QThread):
-    def __init__(self, parent=None):
-        QThread.__init__(self, parent)
+    def __init__(self, method, *args):
+        QThread.__init__(self)
+        self.method = method
+        self.args = args
         
     def run(self):
-        self.exec_()
+        self.method(*self.args)
