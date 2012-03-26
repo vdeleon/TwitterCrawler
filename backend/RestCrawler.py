@@ -9,26 +9,24 @@ from Base import *
 from PySide.QtCore import *
 
 class RestCrawler(QObject):
-    
-    dataReady = Signal(SearchStep)
-    
-    def __init__(self, auth=None):
-        QObject.__init__(self)
-        self.__enabled = True
+    def __init__(self, auth=None, parent=None):
+        QObject.__init__(self, parent)
+        self._enabled = True
         self.rest = rest(auth)
-        #self.signal = SearchSignal()
+        self.signal = SearchSignal()
         self.known_locations = {}
     
     def disable(self):
-        self.__enabled = False
+        self._enabled = False
         
     def isEnabled(self):
-        return self.__enabled
+        return self._enabled
     
     def enable(self):
-        self.__enabled = True
+        self._enabled = True
         
     def getPlaceCoordinates(self, name):
+        print name
         if name in self.known_locations:
             return self.known_locations[name]
         try:
@@ -44,10 +42,8 @@ class RestCrawler(QObject):
             self.known_locations[name] = (coordinates[1], coordinates[0])
             return (coordinates[1], coordinates[0])
         except TweepError as e:
-            print e.resp
             return (None, None)
     
-    @Slot(float, float, float)
     def getTweetsInsideArea(self, lat, long, radius):
         string = "%f,%f,%fmi" % (lat, long, radius)
         results = self.rest.search(geocode=string, include_entities=True, rpp=100)
@@ -65,7 +61,7 @@ class RestCrawler(QObject):
             for h in res.entities["hashtags"]:
                 tweet.hashtags.append(h["text"])
             sStep.tweets.append(tweet)
-        self.dataReady.emit(sStep)
+        self.signal.dataReady.emit(sStep)
         
     def getUserFollowers(self, user):
         result = self.rest.followers(user.id)
@@ -73,7 +69,7 @@ class RestCrawler(QObject):
         for res in result:
             user.followers.append(User(name=user.screen_name, id=res.id))
             sStep.users.append(user)
-        self.dataReady.emit(sStep)
+        self.signal.dataReady.emit(sStep)
         
 if __name__ == "__main__":
     import pprint as p

@@ -13,27 +13,22 @@ CONSUMER_KEY = ""
 CONSUMER_SECRET = ""
 
 class Crawler(QObject):
-    
-    dataReady = Signal(SearchStep)
-    
     def __init__(self):
         QObject.__init__(self)
+        self.settings = QSettings("rferrazz", "TwitterCrawler")
+        self.db = DatabaseManager()
+        self.streamingListener = Listener()
         self.rest = None
         self.streaming = None
         self.auth = None
-        self.settings = QSettings("rferrazz", "TwitterCrawler")
+        self.search = None
         self.threadPool = []
-        #self.signal = SearchSignal()
         
     def authInit(self):
         self.rest = RestCrawler(self.auth)
-        self.streaming = StreamingCrawler(self.auth)
-        self.rest.dataReady.connect(self.saveResults)
-        QObject.connect(self.streaming, SIGNAL('dataReady(object)'), self.saveResults)
-        
-    @Slot(SearchStep)
-    def saveResults(self, step):
-        self.dataReady.emit(step)
+        self.streaming = StreamingCrawler(self.auth, self.streamingListener)
+        self.rest.signal.dataReady.connect(self.updateSearchStep)
+        self.streamingListener.signal.dataReady.connect(self.updateSearchStep)
     
     def getAuthUrl(self):
         self.auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
@@ -55,6 +50,33 @@ class Crawler(QObject):
         self.authInit()
         return True
     
+    def createSearch(self):
+        self.search = self.db.createSearch("Tmp")
+        
+    def addSearchStep(self):
+        self.db.addSearchStep(self.search)
+        
+    def getSteps(self):
+        if self.search == None:
+            return 0
+        return self.db.getSteps(self.search)
+        
+    @Slot(SearchStep)
+    def updateSearchStep(self, step):
+        for u in step.users:
+            self.db.addUser(u.id, u.name, self.search, self.step)
+            for f in u.followers:
+                self.db.addFollower(f.id, f.name, self.search, self.step, self.db.getUserId(t_screen_name=u.name))
+        for t in step.tweets:
+            self.db.addUser(t.user.id, t.user.name, self.search, self.step)
+            userId = self.db.getUserId(t.user.name)
+            if t.location != None:
+                self.db.addLocation(userId, t.time, t.location[0], t.location[1])
+            for tag in t.hashtags:
+                self.db.addHashtag(userId, tag)
+            for link in t.links:
+                self.db.addLink(userId, link)
+    
     def trackTweetsInsideArea(self, lat1, lon1, lat2, lon2):
         '''Get tweets inside the given bounding box'''
         width = abs(lat2-lat1)
@@ -71,5 +93,4 @@ class Crawler(QObject):
             (latc, longc) = (lat+(width/2), lon+(height/2))
             radius = (height/2)*69.09
             self.threadPool.append(MyThread(self.rest.getTweetsInsideArea, latc, longc, radius))
-            self.threadPool[-1].start()
         self.streaming.trackTweetsInsideArea(lat1, lon1, lat2, lon2)

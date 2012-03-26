@@ -2,124 +2,48 @@
 import QtQuick 1.1
 import QtMobility.location 1.2
 
+import "MainView.js" as UT
 
 View{
     id: mainView
-    property string search: "None"
-    property string step: "0"
+    property bool mapEnabled: true
     signal newSearch()
     signal startMapSearch(variant lat1, variant long1, variant lat2, variant long2)
-    function addMenuItem(qml, personalize){
-        var component = Qt.createComponent(qml);
-        var sprite = component.createObject(clumn, personalize);
-        if (sprite == null) {
-            // Error Handling
+    function addMapObject(id, name, lat, lon){
+        var component = Qt.createComponent("MapDot.qml");
+        var object = component.createObject(map, {objectName: name, latitude:lat, longitude: lon});
+        map.addMapObject(object);
+        UT.locations.push(object);
+        if (object == null) {
             console.log("Error creating object");
         }
     }
-    ToolBaloon{
-        id: info
-        height: clumn.height+7
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.rightMargin: 5
-        anchors.topMargin: 5
-        Column{
-            id: clumn
-            anchors.top: info.top
-            anchors.right: info.right
-            anchors.left: info.left
-            anchors.margins: 3
-            spacing: 1
-            add: Transition{
-                NumberAnimation {properties: "opacity"; to: 1; duration: 500; easing.type: Easing.OutQuad }
-            }
-            move: Transition {
-                NumberAnimation {
-                    properties: "y"
-                    easing.type: Easing.OutQuad
-                    duration: 500
-                }
-            }
-            Text{
-                color: "white"
-                text: "Search: "+mainView.search
-            }
-            Text{
-                id: step
-                color: "white"
-                text: "SearchStep: "+mainView.step
-            }
-            ToolButton{
-                id: newSearch
-                text: "Nuova Ricerca"
-                onClicked:{
-                    mainView.newSearch();
-                    searchOptions.visible = true
-                    newSearch.visible = false
-                }
-            }
-            RadioGroup{
-                id: radioGroup
-                onSelectedValueChanged: {
-                }
-            }
-            Row{
-                id: searchOptions
-                visible: false
-                RadioButton{
-                    width: clumn.width/3
-                    text: "Mappa"
-                    group: radioGroup
-                    content: mapMenu
-                    value: "MapMenu.qml"
-                }
-                RadioButton{
-                    width: clumn.width/3
-                    text: "Hash"
-                    group: radioGroup
-                    content: hashMenu
-                    value: "HashMenu.qml"
-                }
-                RadioButton{
-                    width: clumn.width/3
-                    text: "Link"
-                    group: radioGroup
-                    content: linkMenu
-                    value: "LinkMenu.qml"
-                }
-            }
-            MapMenu{
-                id: mapMenu
-                visible: false
-                onMapEnabler: {
-                    map.enabled = enabled;
-                }
-                onStartSearch: {
-                    if(selectedRegion.topLeft.latitude != selectedRegion.bottomRight.latitude){
-                        mainView.startMapSearch(selectedRegion.topLeft.latitude,
-                                                selectedRegion.topLeft.longitude,
-                                                selectedRegion.bottomRight.latitude,
-                                                selectedRegion.bottomRight.longitude)
-                    }
-                }
-            }
-            HashMenu{
-                id: hashMenu
-                visible: false
-            }
-            LinkMenu{
-                id: linkMenu
-                visible: false
-            }
+    function selectMarkerIcon(mx, my){
+        for(var i = (UT.locations.length-1); i >= 0; --i) {
+            var topLeftPoint = map.toScreenPosition(UT.locations[i].coordinate);
 
-            z:4
+            var xStart = parseInt(topLeftPoint.x);
+            var yStart =  parseInt(topLeftPoint.y);
+            var xsizes = 24;
+
+            if((mx >= xStart) && (my >= yStart)
+                    && (mx <= (xStart + xsizes)) && (my <= (yStart + xsizes))){
+                UT.getPointInfo(i);
+                return i;
+            }
         }
-        Behavior on height {NumberAnimation{duration: 500; easing.type: Easing.OutQuad}}
+        return -1;
+    }
+    Component.onCompleted: {
+        UT.root = mainView;
+        UT.map = map;
+        UT.toolBaloon = info;
+        UT.selectedRegion = selectedRegion
+        UT.setTools();
     }
     Map{
         id: map
-        property bool enabled: true
+        property bool enabled: mainView.mapEnabled
         anchors.fill: parent
         zoomLevel: 2
         center: Coordinate{
@@ -144,6 +68,14 @@ View{
                 } else {
                     clickNumber = 0;
                 }
+                var selectedIcon = selectMarkerIcon(mouse.x, mouse.y);
+
+                if(selectedIcon >= 0 && selectedIcon <  UT.locations.length){
+                    UT.locations[selectedIcon].source =  "images/map-dot-selected.png";
+                }
+                if(UT.lastselected != -1)
+                    UT.locations[UT.lastselected].source = "images/map-dot.png";
+                UT.lastselected = selectedIcon;
 
                 lastX = mouse.x
                 lastY = mouse.y
@@ -190,7 +122,13 @@ View{
             border.color: "green"
             border.width: 3
         }
-
+    }
+    ToolBaloon{
+        id: info
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: 5
+        anchors.topMargin: 5
     }
     Keys.onPressed: {
         if (event.key == Qt.Key_Plus) {

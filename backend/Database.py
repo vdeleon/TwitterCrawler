@@ -3,16 +3,15 @@ Created on 28/feb/2012
 
 @author: Riccardo Ferrazzo <f.riccardo87@gmail.com>
 '''
-import tweepy, os
+import sqlite3
 from time import time
-import sqlite3 as sqlite
 from queries import *
 
 class DatabaseManager(object):
     def __init__(self):
-        #self.db = sqlite.connect(":memory:")
-        self.db = sqlite.connect("debug.db")
-        self.db.row_factory = sqlite.Row
+        self.db = sqlite3.connect(":memory:")
+        #self.db = sqlite3.connect("/home/riccardo/Programmi/TwitterCrawler/debug.db")
+        self.db.row_factory = sqlite3.Row
         self.cursor = self.db.cursor()
         self.createDbStructure()
         
@@ -26,6 +25,7 @@ class DatabaseManager(object):
             self.cursor.execute(table_hashtags)
             self.cursor.execute(table_links)
             self.db.commit()
+        return
             
     def deleteOrphans(self):
         self.cursor.execute("DELETE FROM users WHERE search NOT IN (SELECT distinct id from searches)")
@@ -35,17 +35,14 @@ class DatabaseManager(object):
         self.cursor.execute("DELETE FROM links WHERE user NOT IN (SELECT distinct id from users)")
         self.db.commit()
         
-    def __getLastSearchId(self):
-        self.cursor.execute('SELECT max("id") FROM "searches"')
+    def getLastSearchId(self):
+        self.cursor.execute('SELECT max(id) FROM searches')
         return self.cursor.fetchone()[0]
-    
-    def tmp(self):
-        return self.__getLastSearchId()
         
     def createSearch(self, descr):
         self.cursor.execute("INSERT INTO searches(date, descr) VALUES(?, ?)", (int(time()), descr))
         self.db.commit()
-        return self.__getLastSearchId()
+        return self.getLastSearchId()
                 
     def deleteSearch(self, search_id):
         self.cursor.execute("DELETE FROM searches WHERE id=?", (search_id,))
@@ -53,23 +50,23 @@ class DatabaseManager(object):
         self.deleteOrphans()
         
     def deleteLastSearch(self):
-        self.deleteSearch(self.__getLastSearchId())
+        self.deleteSearch(self.getLastSearchId())
     
     def addSearchStep(self, search_id):
         self.cursor.execute(add_search_step, (search_id, search_id))
         self.db.commit()
+        
+    def getSteps(self, search_id):
+        self.cursor.execute("SELECT total_steps FROM searches WHERE id=?", (search_id,))
+        return self.cursor.fetchone()[0]
     
     def addUser(self, t_id, t_screen_name, search_id, step):
         self.cursor.execute("INSERT INTO users(t_id, t_screen_name, search, step) VALUES(?, ?, ?, ?)",
                             (t_id, t_screen_name, search_id, step))
         self.db.commit()
         
-    def getUserId(self, **kwargs):
-        '''kwarg can be only t_id or t_screen_name'''
-        var = kwargs.keys()[0]
-        if var not in ["t_id", "t_screen_name"]:
-            raise Exception("Wrong variable it can be only t_id or t_screen_name")
-        self.cursor.execute('SELECT id FROM users WHERE ?=?', (var, kwargs[var]))
+    def getUserId(self, name):
+        self.cursor.execute("SELECT id FROM users WHERE t_screen_name=?", (name,))
         return self.cursor.fetchone()[0]
         
     def addFollower(self, t_id, t_screen_name, search_id, step, user_id):
@@ -82,6 +79,12 @@ class DatabaseManager(object):
         self.cursor.execute("INSERT INTO locations(user, date, lat, long) VALUES(?, ?, ?, ?)", 
                             (user_id, date, latitude, longitude))
         self.db.commit()
+        
+    def getStepInfo(self, step):
+        self.cursor.execute('''SELECT users.id, users.t_screen_name, locations.date, locations.lat, locations.long 
+        FROM locations, users
+        WHERE locations.user = users.id AND users.step = ?''', (step,))
+        return self.cursor.fetchall()
     
     def addHashtag(self, user_id, tag):
         self.cursor.execute("INSERT INTO hashtags(user, tag) VALUES(?, ?)", (user_id, tag))
@@ -94,4 +97,4 @@ class DatabaseManager(object):
 if __name__ == "__main__":
     '''used for debug'''
     db = DatabaseManager()
-    print db.tmp()
+    print db.getUserId("SamDiephuis")

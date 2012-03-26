@@ -1,5 +1,6 @@
 // import QtQuick 1.0 // to target S60 5th Edition or Maemo 5
 import QtQuick 1.1
+import TwitterCrawler 1.0
 
 PageStack{
     id: root
@@ -7,10 +8,19 @@ PageStack{
     height: 600
     currentPage: defaultView
 
+    Controller{
+        id: controller
+        onLocationsUpdated: {
+            for(var i in locations)
+                defaultView.addMapObject(locations[i].id,
+                                         locations[i].username,
+                                         locations[i].lat,
+                                         locations[i].lon);
+        }
+    }
+
     MainView{
         id: defaultView
-        search: controller.search
-        step: controller.step
         onNewSearch: {
             controller.createNewSearch();
         }

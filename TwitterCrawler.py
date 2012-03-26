@@ -8,52 +8,75 @@ from PySide.QtCore import *
 from PySide.QtGui import *
 from PySide.QtDeclarative import *
 from PySide.QtOpenGL import *
+from backend.Base import *
 
-from backend.SearchManager import SearchManager
+from backend.Crawler import Crawler
 
-class Controller(QObject):
-    sm = SearchManager()
-    changed = Signal()
-    loginChanged = Signal()
-
-    def login(self):
-        return self.sm.crawler.login()
+class Controller(Crawler):
+    def __init__(self):
+        Crawler.__init__(self)
     
-    def _loginUrl(self):
-        return self.sm.crawler.getAuthUrl()
-    
-    def _search(self):
-        if self.sm.search != None:
+    def getSearch(self):
+        if self.search != None:
             return "Temp"
         return "None"
     
-    def _step(self):
-        return str(self.sm.step)
+    def getAuthUrl(self):
+        return Crawler.getAuthUrl(self)
     
+    def login(self):
+        return Crawler.login(self)
+    
+    def getSteps(self):
+        return str(Crawler.getSteps(self))
+    
+    @Slot(SearchStep)
+    def updateSearchStep(self, step):
+        Crawler.updateSearchStep(self, step)
+        self.locationsUpdated.emit()
+        
     @Slot(str)
     def loginWithCode(self, code):
-        self.sm.crawler.setAuthAccess(code)
-        self.sm.crawler.login()
+        self.setAuthAccess(code)
+        self.login()
     
     @Slot()  
     def createNewSearch(self):
-        self.sm.createSearch()
+        self.createSearch()
         self.changed.emit()
         
     @Slot(float, float, float, float)
     def startMapSearch(self, lat1, long1, lat2, long2):
-        self.sm.addSearchStep()
+        self.addSearchStep()
         self.changed.emit()
-        self.sm.crawler.trackTweetsInsideArea(lat1, long1, lat2, long2)
+        self.trackTweetsInsideArea(lat1, long1, lat2, long2)
     
-    loginUrl = Property(unicode, _loginUrl, notify=loginChanged)
+    def updateLocations(self):
+        loc = self.db.getStepInfo(self.step)
+        res = []
+        for l in loc:
+            tmp = {}
+            tmp["id"] = l[0]
+            tmp["username"] = l[1]
+            tmp["date"] = l[2]
+            tmp["lat"] = l[3]
+            tmp["lon"] = l[4]
+            res.append(tmp)
+        return res
+    
+    changed = Signal()
+    loginChanged = Signal()
+    locationsUpdated = Signal()
+    loginUrl = Property(unicode, getAuthUrl, notify=loginChanged)
     loggedIn = Property(bool, login, notify=changed)
-    search = Property(str, _search, notify=changed)
-    step = Property(str, _step, notify=changed)
+    _search = Property(str, getSearch, notify=changed)
+    step = Property(str, getSteps, notify=changed)
+    locations = Property("QVariant", updateLocations, notify=locationsUpdated)
 
 if __name__ == "__main__":
     frontend = os.path.join(os.path.realpath(os.path.dirname(__file__)), "frontend")
     app = QApplication(sys.argv)
+    qmlRegisterType(Controller, "TwitterCrawler", 1, 0, "Controller")
     
     view = QDeclarativeView()
     glw = QGLWidget()
@@ -67,4 +90,4 @@ if __name__ == "__main__":
     view.show()
     
     app.exec_()
-    sys.exit()        
+    sys.exit()               

@@ -30,6 +30,10 @@ class MyThread(QThread):
         QThread.__init__(self)
         self.method = method
         self.args = args
+        self.start()
         
     def run(self):
         self.method(*self.args)
+        
+class SearchSignal(QObject):
+    dataReady = Signal(SearchStep)
