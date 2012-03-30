@@ -8,7 +8,12 @@ View{
     id: mainView
     property bool mapEnabled: true
     signal newSearch()
+    signal stopSearch()
     signal startMapSearch(variant lat1, variant long1, variant lat2, variant long2)
+    signal requestPointInfo(variant points)
+    function showPointInfo(info){
+        UT.showPointInfo(info)
+    }
     function addMapObject(id, name, lat, lon){
         var component = Qt.createComponent("MapDot.qml");
         var object = component.createObject(map, {objectName: name, latitude:lat, longitude: lon});
@@ -17,22 +22,6 @@ View{
         if (object == null) {
             console.log("Error creating object");
         }
-    }
-    function selectMarkerIcon(mx, my){
-        for(var i = (UT.locations.length-1); i >= 0; --i) {
-            var topLeftPoint = map.toScreenPosition(UT.locations[i].coordinate);
-
-            var xStart = parseInt(topLeftPoint.x);
-            var yStart =  parseInt(topLeftPoint.y);
-            var xsizes = 24;
-
-            if((mx >= xStart) && (my >= yStart)
-                    && (mx <= (xStart + xsizes)) && (my <= (yStart + xsizes))){
-                UT.getPointInfo(i);
-                return i;
-            }
-        }
-        return -1;
     }
     Component.onCompleted: {
         UT.root = mainView;
@@ -68,7 +57,7 @@ View{
                 } else {
                     clickNumber = 0;
                 }
-                var selectedIcon = selectMarkerIcon(mouse.x, mouse.y);
+                var selectedIcon = UT.selectMarkerIcon(mouse.x, mouse.y);
 
                 if(selectedIcon >= 0 && selectedIcon <  UT.locations.length){
                     UT.locations[selectedIcon].source =  "images/map-dot-selected.png";

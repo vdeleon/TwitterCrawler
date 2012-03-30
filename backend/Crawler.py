@@ -9,15 +9,14 @@ from Database import *
 from PySide.QtCore import *
 import tweepy
 
-CONSUMER_KEY = ""
-CONSUMER_SECRET = ""
+CONSUMER_KEY = "JmaTtQcCQUjz9YzTfB3FbQ"
+CONSUMER_SECRET = "9dqYHe7P1R22UqbhzukpX5WUGZwYOVCM9OkgUsQMpUI"
 
 class Crawler(QObject):
     def __init__(self):
         QObject.__init__(self)
         self.settings = QSettings("rferrazz", "TwitterCrawler")
         self.db = DatabaseManager()
-        self.streamingListener = Listener()
         self.rest = None
         self.streaming = None
         self.auth = None
@@ -26,9 +25,9 @@ class Crawler(QObject):
         
     def authInit(self):
         self.rest = RestCrawler(self.auth)
-        self.streaming = StreamingCrawler(self.auth, self.streamingListener)
+        self.streaming = StreamingCrawler(self.auth)
         self.rest.signal.dataReady.connect(self.updateSearchStep)
-        self.streamingListener.signal.dataReady.connect(self.updateSearchStep)
+        self.streaming.listener.signal.dataReady.connect(self.updateSearchStep)
     
     def getAuthUrl(self):
         self.auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
@@ -94,3 +93,6 @@ class Crawler(QObject):
             radius = (height/2)*69.09
             self.threadPool.append(MyThread(self.rest.getTweetsInsideArea, latc, longc, radius))
         self.streaming.trackTweetsInsideArea(lat1, lon1, lat2, lon2)
+        
+    def stop(self):
+        self.streaming.stop()

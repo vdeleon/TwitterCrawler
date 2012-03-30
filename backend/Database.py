@@ -65,6 +65,10 @@ class DatabaseManager(object):
                             (t_id, t_screen_name, search_id, step))
         self.db.commit()
         
+    def getUser(self, uid):
+        self.cursor.execute("SELECT * FROM users WHERE id=?", (uid,))
+        return self.cursor.fetchone()
+        
     def getUserId(self, name):
         self.cursor.execute("SELECT id FROM users WHERE t_screen_name=?", (name,))
         return self.cursor.fetchone()[0]
@@ -80,10 +84,10 @@ class DatabaseManager(object):
                             (user_id, date, latitude, longitude))
         self.db.commit()
         
-    def getStepInfo(self, step):
+    def getStepInfo(self, step, last_id):
         self.cursor.execute('''SELECT users.id, users.t_screen_name, locations.date, locations.lat, locations.long 
         FROM locations, users
-        WHERE locations.user = users.id AND users.step = ?''', (step,))
+        WHERE locations.user = users.id AND users.step = ? AND users.id>?''', (step,last_id))
         return self.cursor.fetchall()
     
     def addHashtag(self, user_id, tag):
@@ -93,6 +97,22 @@ class DatabaseManager(object):
     def addLink(self, user_id, address):
         self.cursor.execute("INSERT INTO links(user, address) VALUES(?, ?)", (user_id, address))
         self.db.commit()
+        
+    def getHashTagsOf(self, ulist):
+        query = "SELECT DISTINCT count(*), tag FROM hashtags WHERE user IN (%d" % (ulist[0])
+        for id in ulist[1:]:
+            query += ", %d" % (id)
+        query+=") GROUP BY tag ORDER BY count(*) DESC"
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+    
+    def getLinksOf(self, ulist):
+        query = "SELECT DISTINCT count(*), address FROM links WHERE user IN (%d" % (ulist[0])
+        for id in ulist[1:]:
+            query += ", %d" % (id)
+        query += ") GROUP BY address ORDER BY count(*) DESC"
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
     
 if __name__ == "__main__":
     '''used for debug'''

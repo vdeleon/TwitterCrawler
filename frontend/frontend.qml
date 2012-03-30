@@ -17,6 +17,10 @@ PageStack{
                                          locations[i].lat,
                                          locations[i].lon);
         }
+        onPointInfoPrepared: {
+            console.log(pointsInfo)
+            defaultView.showPointInfo(pointsInfo)
+        }
     }
 
     MainView{
@@ -26,6 +30,12 @@ PageStack{
         }
         onStartMapSearch: {
             controller.startMapSearch(lat1, long1, lat2, long2);
+        }
+        onStopSearch: {
+            controller.stop()
+        }
+        onRequestPointInfo: {
+            controller.getPointInfo(points);
         }
     }
 

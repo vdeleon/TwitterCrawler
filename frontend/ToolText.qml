@@ -6,5 +6,5 @@ Text{
     width: parent.width
     color: "white"
     verticalAlignment: Text.AlignVCenter
-    horizontalAlignment: Text.AlignHCenter
+    horizontalAlignment: Text.AlignLeft
 }

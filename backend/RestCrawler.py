@@ -26,7 +26,6 @@ class RestCrawler(QObject):
         self._enabled = True
         
     def getPlaceCoordinates(self, name):
-        print name
         if name in self.known_locations:
             return self.known_locations[name]
         try:
@@ -46,7 +45,7 @@ class RestCrawler(QObject):
     
     def getTweetsInsideArea(self, lat, long, radius):
         string = "%f,%f,%fmi" % (lat, long, radius)
-        results = self.rest.search(geocode=string, include_entities=True, rpp=100)
+        results = self.rest.search(geocode=string, include_entities=True, rpp=100, result_type="recent")
         sStep = SearchStep()
         for res in results:
             if res.geo == None:
