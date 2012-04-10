@@ -18,6 +18,7 @@ class Controller(Crawler):
         self.last_id = 0
         self._locations = []
         self._pointsInfo = {}
+        self._hashtags = []
     
     def getSearch(self):
         if self.search != None:
@@ -59,6 +60,12 @@ class Controller(Crawler):
         self.changed.emit()
         self.trackTweetsInsideArea(lat1, long1, lat2, long2)
     
+    @Slot(str)
+    def startContentSearch(self, content):
+        self.addSearchStep()
+        self.changed.emit()
+        self.trackTweetsByContent(content)
+    
     def updateLocations(self):
         loc = self.db.getStepInfo(self.step, self.last_id)
         self._locations = []
@@ -90,21 +97,33 @@ class Controller(Crawler):
             self._pointsInfo["links"].append([l[0], l[1]])
         self.pointInfoPrepared.emit()
         
-        
-        
     def getPiResult(self):
         return self._pointsInfo
+        
+    @Slot("QVariant")
+    def getSimilarHashtags(self, tags):
+        self._hashtags = []
+        if tags == []:
+            return
+        for u in self.db.getRelatedHashtag(tags):
+            self._hashtags.append(u[0])
+        self.similarHashtagsPrepared.emit()
+        
+    def getSimilarHashtagsResult(self):
+        return self._hashtags
     
     changed = Signal()
     loginChanged = Signal()
     locationsUpdated = Signal()
     pointInfoPrepared = Signal()
+    similarHashtagsPrepared = Signal()
     loginUrl = Property(unicode, getAuthUrl, notify=loginChanged)
     loggedIn = Property(bool, login, notify=changed)
     _search = Property(str, getSearch, notify=changed)
     step = Property(str, getSteps, notify=changed)
     locations = Property("QVariant", getLocations, notify=locationsUpdated)
     pointsInfo = Property("QVariant", getPiResult, notify=pointInfoPrepared)
+    hashtags = Property("QVariant", getSimilarHashtagsResult, notify=similarHashtagsPrepared)
 
 if __name__ == "__main__":
     frontend = os.path.join(os.path.realpath(os.path.dirname(__file__)), "frontend")

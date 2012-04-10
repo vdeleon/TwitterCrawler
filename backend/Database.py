@@ -114,6 +114,14 @@ class DatabaseManager(object):
         self.cursor.execute(query)
         return self.cursor.fetchall()
     
+    def getRelatedHashtag(self, tags):
+        query = "SELECT DISTINCT user FROM hashtags WHERE tag IN ('%s'" % (tags[0])
+        for t in tags[1:]:
+            query += ", '%s'" % (t)
+        query += ")"
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+    
 if __name__ == "__main__":
     '''used for debug'''
     db = DatabaseManager()

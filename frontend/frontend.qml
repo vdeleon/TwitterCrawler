@@ -13,13 +13,14 @@ PageStack{
         onLocationsUpdated: {
             for(var i in locations)
                 defaultView.addMapObject(locations[i].id,
-                                         locations[i].username,
                                          locations[i].lat,
                                          locations[i].lon);
         }
         onPointInfoPrepared: {
-            console.log(pointsInfo)
             defaultView.showPointInfo(pointsInfo)
+        }
+        onSimilarHashtagsPrepared: {
+            defaultView.showOnlyDots(hashtags)
         }
     }
 
@@ -31,11 +32,22 @@ PageStack{
         onStartMapSearch: {
             controller.startMapSearch(lat1, long1, lat2, long2);
         }
+        onStartContentSearch: {
+            controller.startContentSearch(content)
+        }
+
         onStopSearch: {
             controller.stop()
         }
         onRequestPointInfo: {
             controller.getPointInfo(points);
+        }
+        onLinkClicked: {
+            browserView.url = url;
+            root.push(browserView);
+        }
+        onHashClicked: {
+            controller.getSimilarHashtags(hash);
         }
     }
 
@@ -44,6 +56,13 @@ PageStack{
         url: controller.loginUrl
         onCodeRecived: {
             controller.loginWithCode(auth)
+            root.pop();
+        }
+    }
+
+    BrowserView{
+        id: browserView
+        onBack: {
             root.pop();
         }
     }

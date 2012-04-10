@@ -3,40 +3,43 @@ import QtQuick 1.1
 
 Item {
     id: button
-    signal clicked()
+    signal clicked(string value)
     property string text: "ClickMe"
     property bool checkable: false
     property bool checked: false
-    width: parent.width
+    property string value: ""
+    width: Math.max(244, (text.width+6))
     height: 30
+    onClicked: {
+        if(checkable){
+            checked = !checked;
+            if(checked)
+                buttonColor.color = "#fff";
+            else
+                buttonColor.color = "#000";
+        }
+    }
     Rectangle{
         id: buttonColor
         color: "#000"
-        opacity: 0.2
+        opacity: 0.4
         anchors.fill: parent
         MouseArea{
             anchors.fill: parent
             onPressed: {
-                buttonColor.opacity = 0.5
+                buttonColor.color = "#fff"
             }
             onReleased: {
-                buttonColor.opacity = 0.2
+                buttonColor.color = "#000"
             }
             onClicked: {
-                button.clicked();
-                if(checkable){
-                    checked = !checked;
-                    if(checked)
-                        buttonColor.opacity = 0.5;
-                    else
-                        buttonColor.opacity = 0.2;
-                }
+                button.clicked(button.value);
             }
         }
     }
     Text{
         id: text
-        anchors.fill: parent
+        anchors.centerIn: parent
         color: "#fff"
         text: button.text
         verticalAlignment: Text.AlignVCenter

@@ -10,13 +10,19 @@ View{
     signal newSearch()
     signal stopSearch()
     signal startMapSearch(variant lat1, variant long1, variant lat2, variant long2)
+    signal startContentSearch(string content)
     signal requestPointInfo(variant points)
+    signal linkClicked(string url)
+    signal hashClicked(variant hash)
     function showPointInfo(info){
         UT.showPointInfo(info)
     }
-    function addMapObject(id, name, lat, lon){
+    function showOnlyDots(ids){
+        UT.showOnlyDots(ids)
+    }
+    function addMapObject(id, lat, lon){
         var component = Qt.createComponent("MapDot.qml");
-        var object = component.createObject(map, {objectName: name, latitude:lat, longitude: lon});
+        var object = component.createObject(map, {dbId:id, latitude:lat, longitude: lon});
         map.addMapObject(object);
         UT.locations.push(object);
         if (object == null) {
@@ -27,6 +33,7 @@ View{
         UT.root = mainView;
         UT.map = map;
         UT.toolBaloon = info;
+        UT.infoBaloon = pointInfo;
         UT.selectedRegion = selectedRegion
         UT.setTools();
     }
@@ -48,6 +55,7 @@ View{
             property int clickNumber: 0
 
             onPressed : {
+                focus = true;
                 if(clickNumber < 1 && !map.enabled){
                     if(clickNumber == 0){
                         selectedRegion.topLeft = mouse.coordinate
@@ -119,6 +127,15 @@ View{
         anchors.rightMargin: 5
         anchors.topMargin: 5
     }
+    ToolBaloon{
+        id: pointInfo
+        visible: false
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: info.left
+        anchors.margins: 5
+    }
+
     Keys.onPressed: {
         if (event.key == Qt.Key_Plus) {
             map.zoomLevel += 1

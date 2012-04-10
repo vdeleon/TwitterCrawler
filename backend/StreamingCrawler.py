@@ -10,22 +10,29 @@ from time import time
 import pprint as p
 
 class Listener(QObject, streaming.StreamListener):
+    
+    streamingDataReady = Signal("QVariant")
+    
     def __init__(self, api=None, parent=None):
         QObject.__init__(self, parent)
         streaming.StreamListener.__init__(self, api)
-        self.signal = SearchSignal()
         
     def on_status(self, status):
-        sStep = SearchStep()
-        tweet = Tweet(user=User(status.user.screen_name, status.user.id), 
-                      time=int(time()), 
-                      location=(status.place["bounding_box"]["coordinates"][0][0][1], status.place["bounding_box"]["coordinates"][0][0][0]))
-        for h in status.entities["hashtags"]:
-            tweet.hashtags.append(h["text"])
-        for u in status.entities["urls"]:
-            tweet.links.append(u["expanded_url"])
-        sStep.tweets.append(tweet)
-        self.signal.dataReady.emit(sStep)
+        try:
+            step = {"users": [], "tweets": []}
+            step["tweets"].append({"userId": status.user.id, 
+                                   "userName": status.user.screen_name,
+                                   "time":  int(time()),
+                                   "location": (status.place["bounding_box"]["coordinates"][0][0][1], status.place["bounding_box"]["coordinates"][0][0][0]),
+                                   "hashtags": [],
+                                   "links": []})
+            for h in status.entities["hashtags"]:
+                step["tweets"][-1]["hashtags"].append(h["text"])
+            for u in status.entities["urls"]:
+                step["tweets"][-1]["links"].append(u["expanded_url"])
+            self.streamingDataReady.emit(step)
+        except Exception:
+            return
         
     def on_error(self, status_code):
         print status_code
@@ -38,14 +45,13 @@ class StreamingCrawler(QObject):
             raise ValueError("auth is not valid!")
         self.listener = Listener()
         self.stream = streaming.Stream(auth, self.listener)
-        self.listener.signal.dataReady.connect(self.getRealtimeData)
         
     def trackTweetsInsideArea(self, lat1, lon1, lat2, lon2):
         self.stream.filter(locations=(lon1, lat2, lon2, lat1), async=True)
-    
-    @Slot(SearchStep)    
-    def getRealtimeData(self, step):
-        self.signal.dataReady.emit(step)
         
+    def trackTweetsByContent(self, content):
+        print content
+        self.stream.filter(track=[content], async=True)
+            
     def stop(self):
         self.stream.disconnect()

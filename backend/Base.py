@@ -22,6 +22,7 @@ class Tweet(object):
         
 class SearchStep(object):
     def __init__(self, users=[], tweets=[]):
+        QObject.__init__(self)
         self.users = users
         self.tweets = tweets
 

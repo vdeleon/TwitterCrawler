@@ -9,8 +9,8 @@ from Database import *
 from PySide.QtCore import *
 import tweepy
 
-CONSUMER_KEY = "JmaTtQcCQUjz9YzTfB3FbQ"
-CONSUMER_SECRET = "9dqYHe7P1R22UqbhzukpX5WUGZwYOVCM9OkgUsQMpUI"
+CONSUMER_KEY = ""
+CONSUMER_SECRET = ""
 
 class Crawler(QObject):
     def __init__(self):
@@ -26,8 +26,8 @@ class Crawler(QObject):
     def authInit(self):
         self.rest = RestCrawler(self.auth)
         self.streaming = StreamingCrawler(self.auth)
-        self.rest.signal.dataReady.connect(self.updateSearchStep)
-        self.streaming.listener.signal.dataReady.connect(self.updateSearchStep)
+        self.rest.restDataReady.connect(self.updateSearchStep)
+        self.streaming.listener.streamingDataReady.connect(self.updateSearchStep)
     
     def getAuthUrl(self):
         self.auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
@@ -60,20 +60,20 @@ class Crawler(QObject):
             return 0
         return self.db.getSteps(self.search)
         
-    @Slot(SearchStep)
+    @Slot("QVariant")
     def updateSearchStep(self, step):
-        for u in step.users:
-            self.db.addUser(u.id, u.name, self.search, self.step)
-            for f in u.followers:
-                self.db.addFollower(f.id, f.name, self.search, self.step, self.db.getUserId(t_screen_name=u.name))
-        for t in step.tweets:
-            self.db.addUser(t.user.id, t.user.name, self.search, self.step)
-            userId = self.db.getUserId(t.user.name)
-            if t.location != None:
-                self.db.addLocation(userId, t.time, t.location[0], t.location[1])
-            for tag in t.hashtags:
+        for u in step["users"]:
+            self.db.addUser(u["userId"], u["userName"], self.search, self.step)
+            for f in u["followers"]:
+                self.db.addFollower(f["userId"], f["userName"], self.search, self.step, self.db.getUserId(t_screen_name=u["userName"]))
+        for t in step["tweets"]:
+            self.db.addUser(t["userId"], t["userName"], self.search, self.step)
+            userId = self.db.getUserId(t["userName"])
+            if t["location"] != None:
+                self.db.addLocation(userId, t["time"], t["location"][0], t["location"][1])
+            for tag in t["hashtags"]:
                 self.db.addHashtag(userId, tag)
-            for link in t.links:
+            for link in t["links"]:
                 self.db.addLink(userId, link)
     
     def trackTweetsInsideArea(self, lat1, lon1, lat2, lon2):
@@ -93,6 +93,12 @@ class Crawler(QObject):
             radius = (height/2)*69.09
             self.threadPool.append(MyThread(self.rest.getTweetsInsideArea, latc, longc, radius))
         self.streaming.trackTweetsInsideArea(lat1, lon1, lat2, lon2)
+        
+    def trackTweetsByContent(self, content):
+        if self.rest.isEnabled():
+            self.threadPool.append(MyThread(self.rest.getTweetsByContent, content))
+        self.streaming.trackTweetsByContent(content)
+
         
     def stop(self):
         self.streaming.stop()

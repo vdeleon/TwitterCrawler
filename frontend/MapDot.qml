@@ -6,6 +6,7 @@ MapImage{
     id: root
     property double latitude
     property double longitude
+    property int dbId
     source: "images/map-dot.png"
     coordinate: Coordinate {
         latitude: root.latitude

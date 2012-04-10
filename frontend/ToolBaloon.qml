@@ -1,7 +1,7 @@
 // import QtQuick 1.0 // to target S60 5th Edition or Maemo 5
 import QtQuick 1.1
 
-import "ToolBaloon.js" as Tools
+import "ContentManagement.js" as Tools
 
 Item {
     id: root

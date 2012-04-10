@@ -16,22 +16,16 @@ Item{
         id: searchOptions
         anchors.fill: parent
         RadioButton{
-            width: root.width/3
+            width: root.width/2
             text: "Mappa"
             group: radioGroup
             value: 1
         }
         RadioButton{
-            width: root.width/3
-            text: "Hash"
+            width: root.width/2
+            text: "Contenuto"
             group: radioGroup
             value: 2
-        }
-        RadioButton{
-            width: root.width/3
-            text: "Link"
-            group: radioGroup
-            value: 3
         }
     }
 }
