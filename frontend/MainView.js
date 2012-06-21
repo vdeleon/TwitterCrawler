@@ -30,7 +30,7 @@ var infoBaloon;
 var selectedRegion;
 
 function setTools(){
-    newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: "Nuova Ricerca"}, -1);
+    newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: qsTr("New Search")}, -1);
     setNewSearchButton();
 }
 
@@ -50,7 +50,7 @@ function newSearch(){
     lastselected = -1;
     locations = new Array();
     selectedElements = new Array();
-    newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: "Nuova Ricerca"}, -1);
+    newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: qsTr("New Search")}, -1);
     setNewSearchButton();
     var radio = toolBaloon.addElement("SearchMenu.qml", "search", {}, -1);
     var el = toolBaloon.getElement(radio);
@@ -62,11 +62,11 @@ function newSearch(){
                                         var group = toolBaloon.getElement(searchGroup);
                                         switch(value){
                                         case 1:
-                                            var selectArea = toolBaloon.addElement("ToolButton.qml", "mapBlock", {text: "Seleziona Area", checkable: true}, searchGroup);
+                                            var selectArea = toolBaloon.addElement("ToolButton.qml", "mapBlock", {text: qsTr("Select area"), checkable: true}, searchGroup);
                                             group[selectArea].clicked.connect(function(){
                                                                                   root.mapEnabled = !group[selectArea].checked;
                                                                               });
-                                            var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: "Avvia Ricerca"}, searchGroup);
+                                            var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: qsTr("Start search")}, searchGroup);
                                             group[startSearch].clicked.connect(function(){
                                                                                    root.startMapSearch(selectedRegion.topLeft.latitude,
                                                                                                        selectedRegion.topLeft.longitude,
@@ -77,7 +77,7 @@ function newSearch(){
                                             break;
                                         case 2:
                                             var txt = toolBaloon.addElement("ToolInput.qml", "txt", {}, searchGroup);
-                                            var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: "Avvia Ricerca"}, searchGroup);
+                                            var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: qsTr("Start search")}, searchGroup);
                                             group[startSearch].clicked.connect(function(){
                                                                                    root.startContentSearch(group[txt].text);
                                                                                    showSearchInterface();
@@ -89,15 +89,15 @@ function newSearch(){
 
 function showSearchInterface(){
     toolBaloon.empty();
-    var title = toolBaloon.addElement("ToolText.qml", "info", {text: "Ricerca in corso", "font.bold": true}, -1);
-    var stopSearch = toolBaloon.addElement("ToolButton.qml", "stop", {text: "Stop"}, -1);
+    var title = toolBaloon.addElement("ToolText.qml", "info", {text: qsTr("Searching"), "font.bold": true}, -1);
+    var stopSearch = toolBaloon.addElement("ToolButton.qml", "stop", {text: qsTr("Stop")}, -1);
     var el = toolBaloon.getElement(stopSearch);
     var titleEl = toolBaloon.getElement(title);
     el.clicked.connect(function(){
                            root.stopSearch();
-                           titleEl.text = "Ricerca completata"
+                           titleEl.text = qsTr("Done")
                        });
-    newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: "Nuova Ricerca"}, -1);
+    newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: qsTr("New search")}, -1);
     setNewSearchButton();
 }
 
@@ -163,8 +163,8 @@ function findInArray(el, arr){
 function showPointInfo(info){
     infoBaloon.visible = true;
     infoBaloon.empty();
-    infoBaloon.addElement("ToolText.qml", "element", {text: "Elementi in questo punto: "+info["users"].length, "font.bold": true}, -1);
-    infoBaloon.addElement("ToolText.qml", "ht", {text: "Hashtags utilizzati", "font.bold": true}, -1);
+    infoBaloon.addElement("ToolText.qml", "element", {text: qsTr("Found %1 Elements").arg(info["users"].length), "font.bold": true}, -1);
+    infoBaloon.addElement("ToolText.qml", "ht", {text: qsTr("Hashtags"), "font.bold": true}, -1);
     var hashIdx = infoBaloon.addElement("ResultFlow.qml", "hash", {}, -1);
     var hashFlow = infoBaloon.getElement(hashIdx);
     for(var i in info.hashtags){
@@ -190,7 +190,7 @@ function showPointInfo(info){
                                     showAllDots();
                             });
     }
-    infoBaloon.addElement("ToolText.qml", "lt", {text: "Links utilizzati", "font.bold": true}, -1);
+    infoBaloon.addElement("ToolText.qml", "lt", {text: qsTr("Links"), "font.bold": true}, -1);
     var linkIdx = infoBaloon.addElement("ResultFlow.qml", "hash", {}, -1);
     var linkFlow = infoBaloon.getElement(linkIdx);
     for(var i in info.links){

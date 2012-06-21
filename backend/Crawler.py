@@ -23,8 +23,8 @@ from Database import *
 from PySide.QtCore import *
 import tweepy
 
-CONSUMER_KEY = ""
-CONSUMER_SECRET = ""
+CONSUMER_KEY = "JmaTtQcCQUjz9YzTfB3FbQ"
+CONSUMER_SECRET = "9dqYHe7P1R22UqbhzukpX5WUGZwYOVCM9OkgUsQMpUI"
 
 class Crawler(QObject):
     def __init__(self):

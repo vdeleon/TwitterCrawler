@@ -37,13 +37,13 @@ Item{
         anchors.fill: parent
         RadioButton{
             width: root.width/2
-            text: "Mappa"
+            text: qsTr("Map zone")
             group: radioGroup
             value: 1
         }
         RadioButton{
             width: root.width/2
-            text: "Contenuto"
+            text: qsTr("Content")
             group: radioGroup
             value: 2
         }

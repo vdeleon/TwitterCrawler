@@ -44,7 +44,7 @@ View{
         anchors.margins: 5
     }
     Component.onCompleted: {
-        var i = tools.addElement("ToolButton.qml", "back", {text: "Indietro"}, -1);
+        var i = tools.addElement("ToolButton.qml", "back", {text: qsTr("Back")}, -1);
         var el = tools.getElement(i);
         el.clicked.connect(function(){root.back();})
     }
