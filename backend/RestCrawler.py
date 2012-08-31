@@ -20,26 +20,52 @@ This file is part of TwitterCrawler.
 from tweepy import API as rest
 from tweepy.error import *
 from Base import *
+from AbstractCrawler import AbstractCrawler
 from PySide.QtCore import *
 
-class RestCrawler(QObject):
+class RestCrawler(QObject, AbstractCrawler):
     
     restDataReady = Signal(SearchStep)
     
     def __init__(self, auth=None, parent=None):
         QObject.__init__(self, parent)
-        self._enabled = True
+        AbstractCrawler.__init__(self, ["until", "page"])
         self.rest = rest(auth)
         self.known_locations = {}
-    
-    def disable(self):
-        self._enabled = False
         
-    def isEnabled(self):
-        return self._enabled
-    
-    def enable(self):
-        self._enabled = True
+    def generateSearchStep(self, results, user=False):
+        step = []
+        for res in results:
+            step.append({"year": res.created_at.year,
+                         "month": res.created_at.month,
+                         "day": res.created_at.day,
+                         "hour": res.created_at.hour,
+                         "minute": res.created_at.minute,
+                         "second": res.created_at.second,
+                         "location": False,
+                         "tweet": res.text,
+                         "hashtags": [],
+                         "links": []})
+            if user:
+                step[-1]["userId"] = res.user.id
+                step[-1]["userName"] = res.user.screen_name
+            else:
+                step[-1]["userId"] = res.from_user_id
+                step[-1]["userName"] = res.from_user
+            if res.geo == None:
+                try:
+                    (tlat, tlong) = self.getPlaceCoordinates(res.location)
+                except AttributeError as e:
+                    (tlat, tlong) = (False, False)
+            else:
+                (tlat, tlong) = res.geo["coordinates"]
+            if tlat != False:
+                step[-1]["location"] = {"lat":tlat, "lon":tlong}
+            for u in res.entities["urls"]:
+                step[-1]["links"].append(u["expanded_url"])
+            for h in res.entities["hashtags"]:
+                step[-1]["hashtags"].append(h["text"])
+        return step
         
     def getPlaceCoordinates(self, name):
         if name in self.known_locations:
@@ -59,32 +85,28 @@ class RestCrawler(QObject):
         except TweepError as e:
             return (False, False)
     
-    def getTweetsInsideArea(self, lat, long, radius):
-        string = "%f,%f,%fmi" % (lat, long, radius)
-        try:
-            results = self.rest.search(geocode=string, include_entities=True, rpp=100, result_type="recent")
-        except Exception:
-            '''sometimes tweepy fails'''
+    def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
+        if not self.checkParameters(**parameters):
             return
-        step = {"users": [], "tweets": []}
-        for res in results:
-            if res.geo == None:
-                (tlat, tlong) = self.getPlaceCoordinates(res.location)
-            else:
-                (tlat, tlong) = res.geo["coordinates"]
-            if tlat == False:
-                continue;
-            step["tweets"].append({"userId": res.from_user_id,
-                                   "userName": res.from_user,
-                                   "time": int(res.created_at.strftime("%s")),
-                                   "location": (tlat, tlong),
-                                   "hashtags": [],
-                                   "links": []})
-            for u in res.entities["urls"]:
-                step["tweets"][-1]["links"].append(u["expanded_url"])
-            for h in res.entities["hashtags"]:
-                step["tweets"][-1]["hashtags"].append(h["text"])
-        self.restDataReady.emit(step)
+        width = abs(lat2-lat1)
+        height = abs(lon2-lon1)
+        if lat1 < lat2:
+            lat = lat1
+        else:
+            lat = lat2
+        if lon1 < lon2:
+            lon = lon1
+        else:
+            lon = lon2
+        (latc, longc) = (lat+(width/2), lon+(height/2))
+        radius = (height/2)*69.09
+        string = "%f,%f,%fmi" % (latc, longc, radius)
+        try:
+            results = self.rest.search(geocode=string, include_entities=True, rpp=100, result_type="recent", **parameters)
+            self.restDataReady.emit(self.generateSearchStep(results))
+        except Exception as e:
+            '''sometimes tweepy fails'''
+            print e
         
     def getUserFollowers(self, user):
         result = self.rest.followers(user.id)
@@ -94,17 +116,15 @@ class RestCrawler(QObject):
             sStep.users.append(user)
         self.restDataReady.emit(sStep)
         
-    def getTweetsByContent(self, content):
-        pass
+    def getTweetsByContent(self, content, **parameters):
+        if not self.checkParameters(**parameters):
+            return
+        results = self.rest.search(q=content, include_entities=True, rpp=100, **parameters)
+        self.restDataReady.emit(self.generateSearchStep(results))
         
-if __name__ == "__main__":
-    import pprint as p
-    crawler = RestCrawler()
-    string = "%f,%f,%fmi" % (45.6426657, 12.623754, 5)
-    #res = crawler.rest.search(geocode=string, include_entities=True)
-    res = crawler.rest.geo_search(query="Treviso")
-    
-    print res["result"]["places"]
-    print res["result"]["places"][0]["bounding_box"]["coordinates"][0][0]
-    #p.pprint(res.__getstate__())
+    def getTweetsByUser(self, username, **parameters):
+        if not self.checkParameters(**parameters):
+            return
+        results = self.rest.user_timeline(screen_name=username, include_entities=True, **parameters)
+        self.restDataReady.emit(self.generateSearchStep(results, True))
     

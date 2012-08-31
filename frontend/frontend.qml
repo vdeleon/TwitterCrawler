@@ -20,53 +20,78 @@ This file is part of TwitterCrawler.
 // import QtQuick 1.0 // to target S60 5th Edition or Maemo 5
 import QtQuick 1.1
 import TwitterCrawler 1.0
+import QtMobility.location 1.2
+import "tweets.js" as Tweets
 
 PageStack{
-    id: root
+    id: rootPage
     width: 900
     height: 600
     currentPage: defaultView
 
+    function getUserTweets(userName){
+        controller.getUserTweets(userName)
+    }
+
+    function startHistoricalUserSearch(userName){
+        controller.startHistoricalUserSearch(userName)
+    }
+
     Controller{
         id: controller
-        onLocationsUpdated: {
-            for(var i in locations)
-                defaultView.addMapObject(locations[i].id,
-                                         locations[i].lat,
-                                         locations[i].lon);
+        onTweetsUpdated: {
+            var tw = tweets
+            for(var i in tw){
+                var id = Tweets.addTweet(tw[i]);
+                defaultView.addTweet(id);
+            }
         }
-        onPointInfoPrepared: {
-            defaultView.showPointInfo(pointsInfo)
-        }
-        onSimilarHashtagsPrepared: {
-            defaultView.showOnlyDots(hashtags)
+
+        Component.onCompleted: {
+            userTracked.connect(function(ids){
+                                    var userId = Tweets.getTweetById(ids[0]).userName
+                                    var object = defaultView.addTrackToMap(userId);
+                                    for(var i in ids){
+                                        var tweet = Tweets.getTweetById(ids[i]);
+                                        if(tweet.location != false){
+                                            var coordinate = Qt.createQmlObject("import QtQuick 1.1; import QtMobility.location 1.2;"
+                                                                            +"Coordinate{ latitude: "+ tweet.location.lat+";"
+                                                                            +"longitude: "+tweet.location.lon+"; }", object, "coord");
+                                            object.addCoordinate(coordinate);
+                                        }
+                                    }
+                                });
         }
     }
 
     MainView{
         id: defaultView
-        onNewSearch: {
-            controller.createNewSearch();
+
+        onStartHistoricalMapSearch: {
+            controller.startHistoricalMapSearch(lat1, long1, lat2, long2, delta)
         }
-        onStartMapSearch: {
-            controller.startMapSearch(lat1, long1, lat2, long2);
+
+        onStartHistoricalContentSearch: {
+            controller.startHistoricalContentSearch(content, delta)
         }
-        onStartContentSearch: {
-            controller.startContentSearch(content)
+
+        onStartRealtimeMapSearch: {
+            controller.startRealtimeMapSearch(lat1, long1, lat2, long2)
+        }
+
+        onStartRealtimeContentSearch: {
+            controller.startRealtimeContentSearch(content)
         }
 
         onStopSearch: {
             controller.stop()
         }
-        onRequestPointInfo: {
-            controller.getPointInfo(points);
-        }
         onLinkClicked: {
             browserView.url = url;
-            root.push(browserView);
+            rootPage.push(browserView);
         }
-        onHashClicked: {
-            controller.getSimilarHashtags(hash);
+        onAddPage: {
+            controller.getMoreHistoricalResults();
         }
     }
 
@@ -75,21 +100,21 @@ PageStack{
         url: controller.loginUrl
         onCodeRecived: {
             controller.loginWithCode(auth)
-            root.pop();
+            rootPage.pop();
         }
     }
 
     BrowserView{
         id: browserView
         onBack: {
-            root.pop();
+            rootPage.pop();
         }
     }
 
     Component.onCompleted: {
-        root.push(defaultView)
+        rootPage.push(defaultView)
         if(!controller.loggedIn){
-            root.push(authDialog);
+            rootPage.push(authDialog);
         }
     }
 }

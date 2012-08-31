@@ -17,27 +17,24 @@ This file is part of TwitterCrawler.
     along with TwitterCrawler.  If not, see <http://www.gnu.org/licenses/>
     
 '''
-import sys, os.path
+
+import sys, os.path, datetime
 from PySide.QtCore import *
 from PySide.QtGui import *
 from PySide.QtDeclarative import *
 from PySide.QtOpenGL import *
 from backend.Base import *
+from threading import Timer
 
-from backend.Crawler import Crawler
+from backend.Crawler import *
 
 class Controller(Crawler):
     def __init__(self):
         Crawler.__init__(self)
         self.last_id = 0
-        self._locations = []
-        self._pointsInfo = {}
-        self._hashtags = []
-    
-    def getSearch(self):
-        if self.search != None:
-            return "Temp"
-        return "None"
+        self._tweets = []
+        self.lastSearch = None
+        self.resetTimer = Timer(500.0, self.restartLastSearch)
     
     def getAuthUrl(self):
         return Crawler.getAuthUrl(self)
@@ -45,99 +42,107 @@ class Controller(Crawler):
     def login(self):
         return Crawler.login(self)
     
-    def getSteps(self):
-        return str(Crawler.getSteps(self))
-    
-    @Slot(SearchStep)
+    @Slot("QVariant")
     def updateSearchStep(self, step):
         Crawler.updateSearchStep(self, step)
-        self.updateLocations()
-        self.locationsUpdated.emit()
+        for tweet in step:
+            self._tweets.append(tweet)
+        self.tweetsUpdated.emit()
         
     @Slot(str)
     def loginWithCode(self, code):
         self.setAuthAccess(code)
         self.login()
     
+    @Slot()    
+    def createNewSearch(self):
+        self.db.deleteAll()
+    
     @Slot()
     def stop(self):
         Crawler.stop(self)
     
-    @Slot()  
-    def createNewSearch(self):
-        self.db.deleteLastSearch()
-        self.createSearch()
+    @Slot(float, float, float, float)    
+    def startRealtimeMapSearch(self, lat1, lon1, lat2, lon2):
+        self.getTweetsInsideArea(lat1, lon1, lat2, lon2, crawler=STREAMING_CRAWLER)
         
-    @Slot(float, float, float, float)
-    def startMapSearch(self, lat1, long1, lat2, long2):
-        self.addSearchStep()
-        self.changed.emit()
-        self.trackTweetsInsideArea(lat1, long1, lat2, long2)
+    @Slot(float, float, float, float, int)
+    def startHistoricalMapSearch(self, lat1, lon1, lat2, lon2, delta, page=1):
+        self.lastSearch = {"type": "historicalMap", "lat1": lat1, "lon1": lon1, "lat2": lat2, "lon2": lon2, "delta": delta, "page": page}
+        today = datetime.datetime.today().date()
+        until = today - datetime.timedelta(days=delta)
+        untilstr = until.strftime("%Y-%m-%d")
+        self.getTweetsInsideArea(lat1, lon1, lat2, lon2, crawler=REST_CRAWLER, until=untilstr, page=page)
     
     @Slot(str)
-    def startContentSearch(self, content):
-        self.addSearchStep()
-        self.changed.emit()
-        self.trackTweetsByContent(content)
+    def startRealtimeContentSearch(self, content):
+        self.lastSearch = {"type": "realtimeContent", "content": content}
+        self.getTweetsByContent(content, crawler=STREAMING_CRAWLER)
     
-    def updateLocations(self):
-        loc = self.db.getStepInfo(self.step, self.last_id)
-        self._locations = []
-        for l in loc:
-            if l[0] > self.last_id:
-                self.last_id = l[0] 
-            tmp = {}
-            tmp["id"] = l[0]
-            tmp["username"] = l[1]
-            tmp["date"] = l[2]
-            tmp["lat"] = l[3]
-            tmp["lon"] = l[4]
-            self._locations.append(tmp)
-    
-    def getLocations(self):
-        return self._locations
-    
-    @Slot("QVariant")
-    def getPointInfo(self, points):
-        self._pointsInfo = {"users":[], "hashtags": [], "links": []}
-        for p in points:
-            info = self.db.getUser(p)
-            self._pointsInfo["users"].append([info[0], info[2]])
-        hashtags = self.db.getHashTagsOf(points)
-        for h in hashtags:
-            self._pointsInfo["hashtags"].append([h[0], h[1]])
-        links = self.db.getLinksOf(points)
-        for l in links:
-            self._pointsInfo["links"].append([l[0], l[1]])
-        self.pointInfoPrepared.emit()
+    @Slot(str, int)    
+    def startHistoricalContentSearch(self, content, delta, page=1):
+        self.lastSearch = {"type": "historicalContent", "content": content, "delta": delta, "page": page}
+        today = datetime.datetime.today().date()
+        until = today - datetime.timedelta(days=delta)
+        untilstr = until.strftime("%Y-%m-%d")
+        self.getTweetsByContent(content, crawler=REST_CRAWLER, until=untilstr, page=page)
         
-    def getPiResult(self):
-        return self._pointsInfo
+    @Slot(str)
+    def startHistoricalUserSearch(self, username):
+        self.getTweetsByUser(username, crawler=REST_CRAWLER)
+    
+    @Slot()    
+    def getMoreHistoricalResults(self):
+        if self.lastSearch["type"] == "historicalContent":
+            self.startHistoricalContentSearch(self.lastSearch["content"], 
+                                              self.lastSearch["delta"], 
+                                              self.lastSearch["page"]+1)
+        elif self.lastSearch["type"] == "historicalMap":
+            self.startHistoricalMapSearch(self.lastSearch["lat1"],
+                                          self.lastSearch["lon1"], 
+                                          self.lastSearch["lat2"],
+                                          self.lastSearch["lon2"], 
+                                          self.lastSearch["delta"], 
+                                          self.lastSearch["page"]+1)
         
-    @Slot("QVariant")
-    def getSimilarHashtags(self, tags):
-        self._hashtags = []
-        if tags == []:
+    @Slot(int)
+    def errorHandler(self, code):
+        Crawler.errorHandler(self, code)
+        try:
+            self.resetTimer.start()
+        except RuntimeError as e:
             return
-        for u in self.db.getRelatedHashtag(tags):
-            self._hashtags.append(u[0])
-        self.similarHashtagsPrepared.emit()
         
-    def getSimilarHashtagsResult(self):
-        return self._hashtags
+    def restartLastSearch(self):
+        if self.lastSearch == None:
+            return
+        if self.lastSearch["type"] == "realtimeContent":
+            self.startRealtimeContentSearch(self.lastSearch["content"])
+        elif self.lastSearch["type"] == "historicalContent":
+            self.startHistoricalContentSearch(self.lastSearch["content"], self.lastSearch["delta"])
+    
+    def getTweets(self):
+        tweets = self._tweets
+        self._tweets = []
+        return tweets
+    
+    @Slot(str)
+    def getUserTweets(self, userName):
+        res = []
+        for tid in self.db.getUserTweets(userName):
+            res.append(tid[0])
+        print res
+        self.userTracked.emit(res)
+        
     
     changed = Signal()
     loginChanged = Signal()
-    locationsUpdated = Signal()
-    pointInfoPrepared = Signal()
-    similarHashtagsPrepared = Signal()
+    tweetsUpdated = Signal()
+    userTracked = Signal("QVariant")
     loginUrl = Property(unicode, getAuthUrl, notify=loginChanged)
     loggedIn = Property(bool, login, notify=changed)
-    _search = Property(str, getSearch, notify=changed)
-    step = Property(str, getSteps, notify=changed)
-    locations = Property("QVariant", getLocations, notify=locationsUpdated)
-    pointsInfo = Property("QVariant", getPiResult, notify=pointInfoPrepared)
-    hashtags = Property("QVariant", getSimilarHashtagsResult, notify=similarHashtagsPrepared)
+    tweets = Property("QVariant", getTweets, notify=tweetsUpdated)
+    
 
 if __name__ == "__main__":
     frontend = os.path.join(os.path.realpath(os.path.dirname(__file__)), "frontend")
@@ -145,12 +150,10 @@ if __name__ == "__main__":
     qmlRegisterType(Controller, "TwitterCrawler", 1, 0, "Controller")
     
     view = QDeclarativeView()
-    glw = QGLWidget()
-    view.setViewport(glw)
     view.setResizeMode(QDeclarativeView.SizeRootObjectToView)
     root = view.rootContext()
 
-    view.setSource(os.path.join(frontend, "frontend.qml"))
+    view.setSource(os.path.join(frontend, "frontend.qml")) 
     view.show()
     
     app.exec_()

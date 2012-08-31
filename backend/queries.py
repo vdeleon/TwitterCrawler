@@ -17,40 +17,32 @@ This file is part of TwitterCrawler.
     along with TwitterCrawler.  If not, see <http://www.gnu.org/licenses/>
     
 '''
-table_searches = '''CREATE TABLE "searches" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "date" TEXT,
-    "descr" TEXT,
-    "total_steps" INTEGER NOT NULL DEFAULT (0)
-)'''
 
-table_users = '''CREATE TABLE "users" (
+table_tweets = '''CREATE TABLE "tweets" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "t_id" INTEGER NOT NULL,
-    "t_screen_name" TEXT NOT NULL,
-    "search" INTEGER NOT NULL REFERENCES searches(id) ON DELETE CASCADE,
-    "step" INTEGER NOT NULL DEFAULT (1)
+    "user_name" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "year" INTEGER NOT NULL,
+    "month" INTEGER NOT NULL,
+    "day" INTEGER NOT NULL,
+    "hour" INTEGER NOT NULL,
+    "minute" INTEGER NOT NULL,
+    "second" INTEGER NOT NULL
 )'''
 
 table_locations = '''CREATE TABLE "locations" (
-    "user" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    "date" TEXT,
+    "tweet" INTEGER NOT NULL REFERENCES tweets(id) ON DELETE CASCADE,
     "lat" REAL NOT NULL,
     "long" REAL NOT NULL
 )'''
 
-table_followers = '''CREATE TABLE "followers" (
-    "user" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    "follower" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
-)'''
-
 table_hashtags = '''CREATE TABLE "hashtags" (
-    "user" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "tweet" INTEGER NOT NULL REFERENCES tweets(id) ON DELETE CASCADE,
     "tag" TEXT NOT NULL
 )'''
 
 table_links = '''CREATE TABLE "links" (
-    "user" INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, 
+    "tweet" INTEGER NOT NULL REFERENCES tweets(id) ON DELETE CASCADE,
     "address" TEXT NOT NULL 
 )'''
 

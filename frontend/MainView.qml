@@ -23,38 +23,97 @@ import QtQuick 1.1
 import QtMobility.location 1.2
 
 import "MainView.js" as UT
+import "tweets.js" as Tweets
 
 View{
     id: mainView
     property bool mapEnabled: true
-    signal newSearch()
+    property int historicalSearchDelay: 0
+    property bool realtimeTrack: false
     signal stopSearch()
-    signal startMapSearch(variant lat1, variant long1, variant lat2, variant long2)
-    signal startContentSearch(string content)
+    signal startRealtimeMapSearch(variant lat1, variant long1, variant lat2, variant long2)
+    signal startRealtimeContentSearch(string content)
+    signal startHistoricalMapSearch(variant lat1, variant long1, variant lat2, variant long2, int delta)
+    signal startHistoricalContentSearch(string content, int delta)
     signal requestPointInfo(variant points)
     signal linkClicked(string url)
     signal hashClicked(variant hash)
-    function showPointInfo(info){
-        UT.showPointInfo(info)
+    signal addPage()
+    function showError(message){
+        UT.error(message);
     }
-    function showOnlyDots(ids){
-        UT.showOnlyDots(ids)
-    }
-    function addMapObject(id, lat, lon){
+    function addTweet(id){
+        if(Tweets.getTweetAt(id).location == false){
+            UT.addUntrackedTweet(Tweets.getUnlocalizedTweetNumber());
+            return;
+        }
         var component = Qt.createComponent("MapDot.qml");
-        var object = component.createObject(map, {dbId:id, latitude:lat, longitude: lon});
+        var object = component.createObject(map, {arrayIndex:id});
         map.addMapObject(object);
         UT.locations.push(object);
+        var tweet = Tweets.getTweetAt(id)
+        if(realtimeTrack && UT.tracks[tweet.userName] != null){
+            var coordinate = Qt.createQmlObject("import QtQuick 1.1; import QtMobility.location 1.2;"
+                                            +"Coordinate{ latitude: "+ tweet.location.lat+";"
+                                            +"longitude: "+tweet.location.lon+"; }", object, "coord");
+            UT.tracks[tweet.userName].addCoordinate(coordinate);
+        }
         if (object == null) {
             console.log("Error creating object");
         }
     }
+    function addTrackToMap(id){
+        console.log("adding "+id);
+        if(UT.tracks[id] != null){
+            console.log("   already tracked");
+            map.removeMapObject(UT.tracks[id]);
+        }
+        var object = Qt.createQmlObject("import QtQuick 1.1; import QtMobility.location 1.2;"
+                                           +"MapPolyline{ border.color: \"blue\"; border.width: 2; }",
+                                           map, "route");
+        map.addMapObject(object);
+        UT.tracks[id] = object;
+        return object;
+    }
+    function deleteUserTrack(id){
+        console.log("deleting "+id)
+        map.removeMapObject(UT.tracks[id])
+        UT.tracks[id] = null;
+    }
+    function isTracked(id){
+        if(UT.tracks[id] != null){
+            console.log("isTracked returned true for "+id);
+            return true;
+        }
+        return false;
+    }
+
+    function addTweetToList(arrayIndex){
+        tweetList.addItem(Tweets.getTweetAt(arrayIndex));
+    }
+    function clearTweetList(){
+        tweetList.clear();
+    }
+    function showUnlocatedTweets(){
+        var tweets = Tweets.getUnlocalizedTweets();
+        for(var i in tweets){
+            tweetList.addItem(tweets[i]);
+        }
+    }
+    function clearTweets(){
+        Tweets.clearAll();
+    }
+    function trackUsers(track){
+        Tweets.trackingUsers = true;
+        Tweets.refreshTracks();
+    }
+
     Component.onCompleted: {
         UT.root = mainView;
         UT.map = map;
         UT.toolBaloon = info;
-        UT.infoBaloon = pointInfo;
-        UT.selectedRegion = selectedRegion
+        UT.selectedRegion = selectedRegion;
+        UT.historicalMenu = historicalMenu
         UT.setTools();
     }
     Map{
@@ -82,6 +141,7 @@ View{
                         selectedRegion.bottomRight = mouse.coordinate
                     }
                     clickNumber++;
+                    return;
                 } else {
                     clickNumber = 0;
                 }
@@ -90,8 +150,10 @@ View{
                 if(selectedIcon >= 0 && selectedIcon <  UT.locations.length){
                     UT.locations[selectedIcon].source =  "images/map-dot-selected.png";
                 }
-                if(UT.lastselected != -1)
+                if(UT.lastselected != -1){
                     UT.locations[UT.lastselected].source = "images/map-dot.png";
+                }
+
                 UT.lastselected = selectedIcon;
 
                 lastX = mouse.x
@@ -147,13 +209,85 @@ View{
         anchors.rightMargin: 5
         anchors.topMargin: 5
     }
-    ToolBaloon{
-        id: pointInfo
+    TweetList{
+        id: tweetList
+        height: mainView.height
+        width: 300
+    }
+
+    Item{
+        id: historicalMenu
         visible: false
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: info.left
-        anchors.margins: 5
+        width: 500
+        height: 30
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 20
+        anchors.horizontalCenter: parent.horizontalCenter
+        RadioGroup{
+            id: historicalGroup
+            selectedValue: 0
+            onSelectedValueChanged: {
+                mainView.historicalSearchDelay = selectedValue;
+            }
+        }
+        Rectangle{
+            anchors.fill: parent
+            color: "#000"
+            opacity: 0.8
+            radius: 5
+        }
+        Row{
+            height: parent.height
+            anchors.horizontalCenter: parent.horizontalCenter
+            RadioButton{
+                width: historicalMenu.width/8
+                text: "today"
+                group: historicalGroup
+                value: -1
+            }
+            RadioButton{
+                width: historicalMenu.width/8
+                text: "-1 day"
+                group: historicalGroup
+                value: 0
+            }
+            RadioButton{
+                width: historicalMenu.width/8
+                text: "-2 days"
+                group: historicalGroup
+                value: 1
+            }
+            RadioButton{
+                width: historicalMenu.width/8
+                text: "-3 days"
+                group: historicalGroup
+                value: 2
+            }
+            RadioButton{
+                width: historicalMenu.width/8
+                text: "-4 days"
+                group: historicalGroup
+                value: 3
+            }
+            RadioButton{
+                width: historicalMenu.width/8
+                text: "-5 days"
+                group: historicalGroup
+                value: 4
+            }
+            RadioButton{
+                width: historicalMenu.width/8
+                text: "-6 days"
+                group: historicalGroup
+                value: 5
+            }
+            RadioButton{
+                width: historicalMenu.width/8
+                text: "-7 days"
+                group: historicalGroup
+                value: 6
+            }
+        }
     }
 
     Keys.onPressed: {

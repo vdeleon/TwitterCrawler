@@ -35,6 +35,11 @@ function addToGroup(group, element){
     return elements[group].length -1;
 }
 
+function removeFromGroup(group, index){
+    elements[group][index].destroy();
+    elements[group].splice(index, 1);
+}
+
 function empty(){
     for(var i = elements.length-1; i>=0; i--){
         if( Object.prototype.toString.call( elements[i] ) === '[object Array]' ) {

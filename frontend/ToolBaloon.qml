@@ -44,6 +44,9 @@ Item {
     function deleteGroup(index){
         Tools.deleteGroup(index);
     }
+    function removeFromGroup(group, element){
+        Tools.removeFromGroup(group, element);
+    }
     function getElement(index, group){
         return Tools.elements[index];
     }

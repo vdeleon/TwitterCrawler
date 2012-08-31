@@ -17,124 +17,73 @@ This file is part of TwitterCrawler.
     along with TwitterCrawler.  If not, see <http://www.gnu.org/licenses/>
     
 '''
-import sqlite3
-from time import time
+import sqlite3, datetime
 from queries import *
 
 class DatabaseManager(object):
     def __init__(self):
         self.db = sqlite3.connect(":memory:")
-        #self.db = sqlite3.connect("/home/riccardo/Programmi/TwitterCrawler/debug.db")
+        #self.db = sqlite3.connect("/home/riccardo/TwitterCrawlerdebug.db")
         self.db.row_factory = sqlite3.Row
         self.cursor = self.db.cursor()
         self.createDbStructure()
         
     def createDbStructure(self):
-        self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table' and name='users'")
+        self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table' and name='tweets'")
         if self.cursor.fetchone() == None:
-            self.cursor.execute(table_searches)
-            self.cursor.execute(table_users)
-            self.cursor.execute(table_followers)
+            self.cursor.execute(table_tweets)
             self.cursor.execute(table_locations)
             self.cursor.execute(table_hashtags)
             self.cursor.execute(table_links)
             self.db.commit()
         return
             
-    def deleteOrphans(self):
-        self.cursor.execute("DELETE FROM users WHERE search NOT IN (SELECT distinct id from searches)")
-        self.cursor.execute("DELETE FROM followers WHERE user NOT IN (SELECT distinct id from users) OR follower NOT IN (SELECT distinct id from users)")
-        self.cursor.execute("DELETE FROM locations WHERE user NOT IN (SELECT distinct id from users)")
-        self.cursor.execute("DELETE FROM hashtags WHERE user NOT IN (SELECT distinct id from users)")
-        self.cursor.execute("DELETE FROM links WHERE user NOT IN (SELECT distinct id from users)")
+    def deleteAll(self):
+        self.cursor.execute("DELETE FROM tweets")
+        self.cursor.execute("DELETE FROM locations WHERE tweet NOT IN (SELECT distinct id from tweets)")
+        self.cursor.execute("DELETE FROM hashtags WHERE tweet NOT IN (SELECT distinct id from tweets)")
+        self.cursor.execute("DELETE FROM links WHERE tweet NOT IN (SELECT distinct id from tweets)")
         self.db.commit()
-        
-    def getLastSearchId(self):
-        self.cursor.execute('SELECT max(id) FROM searches')
-        return self.cursor.fetchone()[0]
-        
-    def createSearch(self, descr):
-        self.cursor.execute("INSERT INTO searches(date, descr) VALUES(?, ?)", (int(time()), descr))
-        self.db.commit()
-        return self.getLastSearchId()
-                
-    def deleteSearch(self, search_id):
-        self.cursor.execute("DELETE FROM searches WHERE id=?", (search_id,))
-        self.db.commit()
-        self.deleteOrphans()
-        
-    def deleteLastSearch(self):
-        self.deleteSearch(self.getLastSearchId())
+
+    def addTweet(self, user_name, text, year, month, day, hour, minute, second):
+        self.cursor.execute("INSERT INTO tweets(user_name, text, year, month, day, hour, minute, second) VALUES(?,?,?,?,?,?,?,?)",
+                            (user_name, text, year, month, day, hour, minute, second))
+        return self.cursor.lastrowid
     
-    def addSearchStep(self, search_id):
-        self.cursor.execute(add_search_step, (search_id, search_id))
-        self.db.commit()
+    def addLocation(self, tweet_id, latitude, longitude):
+        self.cursor.execute("INSERT INTO locations(tweet, lat, long) VALUES(?, ?, ?)", 
+                            (tweet_id, latitude, longitude))
         
-    def getSteps(self, search_id):
-        self.cursor.execute("SELECT total_steps FROM searches WHERE id=?", (search_id,))
-        return self.cursor.fetchone()[0]
-    
-    def addUser(self, t_id, t_screen_name, search_id, step):
-        self.cursor.execute("INSERT INTO users(t_id, t_screen_name, search, step) VALUES(?, ?, ?, ?)",
-                            (t_id, t_screen_name, search_id, step))
-        self.db.commit()
-        
-    def getUser(self, uid):
-        self.cursor.execute("SELECT * FROM users WHERE id=?", (uid,))
-        return self.cursor.fetchone()
-        
-    def getUserId(self, name):
-        self.cursor.execute("SELECT id FROM users WHERE t_screen_name=?", (name,))
-        return self.cursor.fetchone()[0]
-        
-    def addFollower(self, t_id, t_screen_name, search_id, step, user_id):
-        self.addUser(t_id, t_screen_name, search_id, step)
-        follower_id = self.getUserId(t_id=t_id)
-        self.cursor.execute("INSERT INTO followers(user, follower) VALUES(?, ?)", (user_id, follower_id))
-        self.db.commit()
-    
-    def addLocation(self, user_id, date, latitude, longitude):
-        self.cursor.execute("INSERT INTO locations(user, date, lat, long) VALUES(?, ?, ?, ?)", 
-                            (user_id, date, latitude, longitude))
-        self.db.commit()
-        
-    def getStepInfo(self, step, last_id):
-        self.cursor.execute('''SELECT users.id, users.t_screen_name, locations.date, locations.lat, locations.long 
-        FROM locations, users
-        WHERE locations.user = users.id AND users.step = ? AND users.id>?''', (step,last_id))
+    def getStepInfo(self, last_id):
+        try:
+            self.cursor.execute('''SELECT tweets.id, tweets.user_name, tweets.year, tweets.month, tweets.day, tweets.hour, tweets.minute, tweets.second, tweets.text
+            FROM tweets
+            WHERE tweets.id>?''', (last_id,))
+        except sqlite3.OperationalError:
+                pass #TODO: sqlite3.OperationalError: Could not decode to UTF-8 column 'text' with text 'I hope I get this damn job ##non-utf8char
         return self.cursor.fetchall()
     
-    def addHashtag(self, user_id, tag):
-        self.cursor.execute("INSERT INTO hashtags(user, tag) VALUES(?, ?)", (user_id, tag))
-        self.db.commit()
+    def getIdLocation(self, t_id):
+        self.cursor.execute('''SELECT lat, long 
+        FROM locations
+        WHERE tweet = ?''', (t_id,))
+        res = self.cursor.fetchone()
+        if res == None:
+            return {"lat": False, "lon": False}
+        return {"lat": res[0], "lon": res[1]}
     
-    def addLink(self, user_id, address):
-        self.cursor.execute("INSERT INTO links(user, address) VALUES(?, ?)", (user_id, address))
-        self.db.commit()
+    def addHashtag(self, tweet_id, tag):
+        self.cursor.execute("INSERT INTO hashtags(tweet, tag) VALUES(?, ?)", (tweet_id, tag))
+    
+    def addLink(self, tweet_id, address):
+        self.cursor.execute("INSERT INTO links(tweet, address) VALUES(?, ?)", (tweet_id, address))
         
-    def getHashTagsOf(self, ulist):
-        query = "SELECT DISTINCT count(*), tag FROM hashtags WHERE user IN (%d" % (ulist[0])
-        for id in ulist[1:]:
-            query += ", %d" % (id)
-        query+=") GROUP BY tag ORDER BY count(*) DESC"
-        self.cursor.execute(query)
+    def getUserTweets(self, userName):
+        self.cursor.execute('SELECT id FROM tweets WHERE user_name = ? ORDER BY year, month, day, hour, minute, second DESC', (userName,))
         return self.cursor.fetchall()
-    
-    def getLinksOf(self, ulist):
-        query = "SELECT DISTINCT count(*), address FROM links WHERE user IN (%d" % (ulist[0])
-        for id in ulist[1:]:
-            query += ", %d" % (id)
-        query += ") GROUP BY address ORDER BY count(*) DESC"
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
-    
-    def getRelatedHashtag(self, tags):
-        query = "SELECT DISTINCT user FROM hashtags WHERE tag IN ('%s'" % (tags[0])
-        for t in tags[1:]:
-            query += ", '%s'" % (t)
-        query += ")"
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
+        
+    def commit(self):
+        self.db.commit()
     
 if __name__ == "__main__":
     '''used for debug'''

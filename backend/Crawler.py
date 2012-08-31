@@ -19,29 +19,33 @@ This file is part of TwitterCrawler.
 '''
 from RestCrawler import *
 from StreamingCrawler import *
-from Database import *
 from PySide.QtCore import *
+from Database import DatabaseManager
 import tweepy
 
 CONSUMER_KEY = "JmaTtQcCQUjz9YzTfB3FbQ"
 CONSUMER_SECRET = "9dqYHe7P1R22UqbhzukpX5WUGZwYOVCM9OkgUsQMpUI"
 
-class Crawler(QObject):
+REST_CRAWLER = 1
+STREAMING_CRAWLER = 2
+
+class Crawler(QObject, AbstractCrawler):
     def __init__(self):
         QObject.__init__(self)
-        self.settings = QSettings("rferrazz", "TwitterCrawler")
+        AbstractCrawler.__init__(self)
+        self.settings = QSettings("RFCode", "TwitterCrawler")
         self.db = DatabaseManager()
         self.rest = None
         self.streaming = None
         self.auth = None
-        self.search = None
         self.threadPool = []
         
     def authInit(self):
         self.rest = RestCrawler(self.auth)
-        self.streaming = StreamingCrawler(self.auth)
+        self.streaming = StreamingCrawler(self.auth, headers={"User-Agent": "TwitterCrawler/1.0"})
         self.rest.restDataReady.connect(self.updateSearchStep)
         self.streaming.listener.streamingDataReady.connect(self.updateSearchStep)
+        self.streaming.listener.streamingError.connect(self.errorHandler)
     
     def getAuthUrl(self):
         self.auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
@@ -63,56 +67,58 @@ class Crawler(QObject):
         self.authInit()
         return True
     
-    def createSearch(self):
-        self.search = self.db.createSearch("Tmp")
-        
-    def addSearchStep(self):
-        self.db.addSearchStep(self.search)
-        
-    def getSteps(self):
-        if self.search == None:
-            return 0
-        return self.db.getSteps(self.search)
-        
+    @Slot(int)
+    def errorHandler(self, code):
+        print "error", code
+        if code >= 600:
+            return;
+        self.stop()
+#        if code == 420: #rate limit error
+#            pass #TODO
+#        elif code == 600: #streaming parsing error
+#            pass 
+#        elif code == 601: #database insertion error
+#            pass
+    
     @Slot("QVariant")
     def updateSearchStep(self, step):
-        for u in step["users"]:
-            self.db.addUser(u["userId"], u["userName"], self.search, self.step)
-            for f in u["followers"]:
-                self.db.addFollower(f["userId"], f["userName"], self.search, self.step, self.db.getUserId(t_screen_name=u["userName"]))
-        for t in step["tweets"]:
-            self.db.addUser(t["userId"], t["userName"], self.search, self.step)
-            userId = self.db.getUserId(t["userName"])
-            if t["location"] != None:
-                self.db.addLocation(userId, t["time"], t["location"][0], t["location"][1])
-            for tag in t["hashtags"]:
-                self.db.addHashtag(userId, tag)
-            for link in t["links"]:
-                self.db.addLink(userId, link)
+        for tweet in step:
+            dbId = self.db.addTweet(tweet["userName"], 
+                                    tweet["tweet"], 
+                                    tweet["year"], 
+                                    tweet["month"], 
+                                    tweet["day"], 
+                                    tweet["hour"], 
+                                    tweet["minute"], 
+                                    tweet["second"])
+            for h in tweet["hashtags"]:
+                self.db.addHashtag(dbId, h)
+            for l in tweet["links"]:
+                self.db.addLink(dbId, l)
+            if tweet["location"] != False:
+                self.db.addLocation(dbId, tweet["location"]["lat"], tweet["location"]["lon"])
+            tweet["dbId"] = dbId
+        self.db.commit()
     
-    def trackTweetsInsideArea(self, lat1, lon1, lat2, lon2):
+    def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
         '''Get tweets inside the given bounding box'''
-        width = abs(lat2-lat1)
-        height = abs(lon2-lon1)
-        if lat1 < lat2:
-            lat = lat1
-        else:
-            lat = lat2
-        if lon1 < lon2:
-            lon = lon1
-        else:
-            lon = lon2
-        if self.rest.isEnabled():
-            (latc, longc) = (lat+(width/2), lon+(height/2))
-            radius = (height/2)*69.09
-            self.threadPool.append(MyThread(self.rest.getTweetsInsideArea, latc, longc, radius))
-        self.streaming.trackTweetsInsideArea(lat1, lon1, lat2, lon2)
+        if (crawler&REST_CRAWLER) == REST_CRAWLER:
+            self.threadPool.append(MyThread(self.rest.getTweetsInsideArea, lat1, lon1, lat2, lon2, **parameters))
+        if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
+            self.streaming.getTweetsInsideArea(lat1, lon1, lat2, lon2, **parameters)
         
-    def trackTweetsByContent(self, content):
-        if self.rest.isEnabled():
-            self.threadPool.append(MyThread(self.rest.getTweetsByContent, content))
-        self.streaming.trackTweetsByContent(content)
+    def getTweetsByContent(self, content, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
+        if (crawler&REST_CRAWLER) == REST_CRAWLER:
+            self.threadPool.append(MyThread(self.rest.getTweetsByContent, content, **parameters))
+        if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
+            self.streaming.getTweetsByContent(content)
+            
+    def getTweetsByUser(self, username, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
+        if(crawler&REST_CRAWLER) == REST_CRAWLER:
+            self.threadPool.append(MyThread(self.rest.getTweetsByUser, username, **parameters))
+        if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
+            self.streaming.getTweetsByUser(username, **parameters)
 
-        
     def stop(self):
         self.streaming.stop()
+        self.db.commit()

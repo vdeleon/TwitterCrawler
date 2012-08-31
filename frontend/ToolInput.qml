@@ -36,5 +36,6 @@ Rectangle{
         cursorVisible: true
         focus: true
         horizontalAlignment: TextInput.AlignHCenter
+        selectByMouse: true
     }
 }

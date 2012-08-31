@@ -24,28 +24,56 @@ import QtQuick 1.1
 Item{
     id: root
     width: parent.width
-    height: 30
-    signal selectedValueChanged(int value);
+    height: 30*2
+    property int searchType: typeGroup.selectedValue
+    signal searchContentChanged(int value)
     RadioGroup{
-        id: radioGroup
-        onSelectedValueChanged: {
-            root.selectedValueChanged(selectedValue);
-        }
+        id: typeGroup
+        selectedValue: 2
     }
-    Row{
-        id: searchOptions
-        anchors.fill: parent
-        RadioButton{
-            width: root.width/2
-            text: qsTr("Map zone")
-            group: radioGroup
-            value: 1
+    RadioGroup{
+        id: contentGroup
+        onSelectedValueChanged: {
+            root.searchContentChanged(selectedValue);
         }
-        RadioButton{
-            width: root.width/2
-            text: qsTr("Content")
-            group: radioGroup
-            value: 2
+        selectedValue: 2
+    }
+
+    Column{
+        anchors.fill: parent
+        Row{
+            id: searchOptions
+            width: parent.width
+            RadioButton{
+                width: root.width/2
+                text: qsTr("Realtime")
+                group: typeGroup
+                value: 2
+            }
+            RadioButton{
+                width: root.width/2
+                text: qsTr("Historical")
+                group: typeGroup
+                value: 1
+            }
+        }
+        Row{
+            width: parent.width
+            RadioButton{
+                width: root.width/2
+                text: qsTr("Map Zone")
+                group: contentGroup
+                value: 1
+            }
+            RadioButton{
+                width: root.width/2
+                text: qsTr("Content")
+                group: contentGroup
+                value: 2
+            }
+        }
+        Component.onCompleted: {
+            searchContentChanged(2)
         }
     }
 }

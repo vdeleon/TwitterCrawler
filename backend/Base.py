@@ -41,14 +41,15 @@ class SearchStep(object):
         self.tweets = tweets
 
 class MyThread(QThread):
-    def __init__(self, method, *args):
+    def __init__(self, method, *args, **kwargs):
         QThread.__init__(self)
         self.method = method
         self.args = args
+        self.kwargs = kwargs
         self.start()
         
     def run(self):
-        self.method(*self.args)
+        self.method(*self.args, **self.kwargs)
         
 class SearchSignal(QObject):
     dataReady = Signal(SearchStep)

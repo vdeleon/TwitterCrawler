@@ -19,15 +19,16 @@ This file is part of TwitterCrawler.
 */
 
 var locations = new Array();
-var selectedElements = new Array();
-var lastselected = -1;
+var tracks = new Object();
 var newSearchIndex = -1;
 var searchGroup = -1;
+var lastselected = -1;
+var unlocatedTweets = -1;
 var root;
 var map;
 var toolBaloon;
-var infoBaloon;
 var selectedRegion;
+var historicalMenu;
 
 function setTools(){
     newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: qsTr("New Search")}, -1);
@@ -40,21 +41,18 @@ function setNewSearchButton(){
     var el = toolBaloon.getElement(newSearchIndex);
     el.clicked.connect(function(){
                            newSearch();
-                           root.newSearch();
                        });
 }
 
 function newSearch(){
     toolBaloon.empty();
+    root.clearTweets();
     emptyMap();
-    lastselected = -1;
     locations = new Array();
-    selectedElements = new Array();
-    newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: qsTr("New Search")}, -1);
-    setNewSearchButton();
+    unlocatedTweets = -1;
     var radio = toolBaloon.addElement("SearchMenu.qml", "search", {}, -1);
     var el = toolBaloon.getElement(radio);
-    el.selectedValueChanged.connect(function(value){
+    el.searchContentChanged.connect(function(value){
                                         if(searchGroup != -1){
                                             toolBaloon.deleteGroup(searchGroup);
                                         }
@@ -68,40 +66,95 @@ function newSearch(){
                                                                               });
                                             var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: qsTr("Start search")}, searchGroup);
                                             group[startSearch].clicked.connect(function(){
-                                                                                   root.startMapSearch(selectedRegion.topLeft.latitude,
-                                                                                                       selectedRegion.topLeft.longitude,
-                                                                                                       selectedRegion.bottomRight.latitude,
-                                                                                                       selectedRegion.bottomRight.longitude);
-                                                                                   showSearchInterface();
+                                                                                   if(group[selectArea].checked)
+                                                                                        group[selectArea].clicked("");
+                                                                                   switch(el.searchType){
+                                                                                   case 1:
+                                                                                       root.startHistoricalMapSearch(selectedRegion.topLeft.latitude,
+                                                                                                                     selectedRegion.topLeft.longitude,
+                                                                                                                     selectedRegion.bottomRight.latitude,
+                                                                                                                     selectedRegion.bottomRight.longitude, root.historicalSearchDelay);
+                                                                                       showSearchInterface("rest", "")
+                                                                                       break;
+                                                                                   case 2:
+                                                                                       root.startRealtimeMapSearch(selectedRegion.topLeft.latitude,
+                                                                                                           selectedRegion.topLeft.longitude,
+                                                                                                           selectedRegion.bottomRight.latitude,
+                                                                                                           selectedRegion.bottomRight.longitude);
+                                                                                       showSearchInterface("streaming", "")
+                                                                                       break;
+                                                                                   }
                                                                                });
                                             break;
                                         case 2:
                                             var txt = toolBaloon.addElement("ToolInput.qml", "txt", {}, searchGroup);
                                             var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: qsTr("Start search")}, searchGroup);
                                             group[startSearch].clicked.connect(function(){
-                                                                                   root.startContentSearch(group[txt].text);
-                                                                                   showSearchInterface();
+                                                                                   switch(el.searchType){
+                                                                                   case 1:
+                                                                                       root.startHistoricalContentSearch(group[txt].text, root.historicalSearchDelay);
+                                                                                       showSearchInterface("rest", group[txt].text);
+                                                                                       break;
+                                                                                   case 2:
+                                                                                       root.startRealtimeContentSearch(group[txt].text);
+                                                                                       showSearchInterface("streaming", group[txt].text);
+                                                                                       break;
+                                                                                   }
                                                                                });
                                             break;
                                         }
                                     });
+    el.searchTypeChanged.connect(function(){
+                                     switch(el.searchType){
+                                     case 1:
+                                         historicalMenu.visible = true;
+                                         break;
+                                     case 2:
+                                         historicalMenu.visible = false;
+                                         break;
+                                     }
+                                 });
 }
 
-function showSearchInterface(){
+function showSearchInterface(type, word){
     toolBaloon.empty();
-    var title = toolBaloon.addElement("ToolText.qml", "info", {text: qsTr("Searching"), "font.bold": true}, -1);
-    var stopSearch = toolBaloon.addElement("ToolButton.qml", "stop", {text: qsTr("Stop")}, -1);
-    var el = toolBaloon.getElement(stopSearch);
+    historicalMenu.visible = false;
+    var title = toolBaloon.addElement("ToolText.qml", "info", {text: qsTr("Searching %1").arg(word), "font.bold": true}, -1);
     var titleEl = toolBaloon.getElement(title);
-    el.clicked.connect(function(){
-                           root.stopSearch();
-                           titleEl.text = qsTr("Done")
-                       });
+    switch(type){
+    case "rest":
+        var addPageIdx = toolBaloon.addElement("ToolButton.qml", "newStep", {text: qsTr("More results")}, -1);
+        var addPage = toolBaloon.getElement(addPageIdx);
+        addPage.clicked.connect(function(){
+                                    root.addPage();
+                                })
+        break;
+    case "streaming":
+        var stopSearch = toolBaloon.addElement("ToolButton.qml", "stop", {text: qsTr("Stop")}, -1);
+        var el = toolBaloon.getElement(stopSearch);
+        el.clicked.connect(function(){
+                               root.stopSearch();
+                               titleEl.text = qsTr("Done")
+                           });
+        var realtimeTrack = toolBaloon.getElement(toolBaloon.addElement("ToolButton.qml", "realtimetrack", {text: qsTr("Realtime track"), checkable: true}, -1));
+        realtimeTrack.clicked.connect(function(){
+                                          root.realtimeTrack = realtimeTrack.checked;
+                                      });
+        break;
+    }
     newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: qsTr("New search")}, -1);
-    setNewSearchButton();
+    var el = toolBaloon.getElement(newSearchIndex);
+    el.clicked.connect(function(){
+                           if(type == "streaming")
+                               root.stopSearch();
+                           newSearch();
+                       });
 }
 
 function emptyMap(){
+    for(var i in tracks){
+        map.removeMapObject(tracks[i]);
+    }
     for(var i=locations.length-1; i>=0; i--){
         map.removeMapObject(locations[i]);
     }
@@ -109,93 +162,47 @@ function emptyMap(){
     selectedRegion.topLeft.longitude = 0;
     selectedRegion.bottomRight.latitude = 0;
     selectedRegion.bottomRight.longitude = 0;
+    map.pan(0,0);
 }
 
 function selectMarkerIcon(mx, my){
+    root.clearTweetList();
     var res = new Array();
-    var ids = new Array();
+    var sel = -1;
     for(var i = (UT.locations.length-1); i >= 0; --i) {
         var topLeftPoint = map.toScreenPosition(locations[i].coordinate);
 
-        var xStart = parseInt(topLeftPoint.x);
-        var yStart =  parseInt(topLeftPoint.y);
+        var xStart = parseInt(topLeftPoint.x-12);
+        var yStart =  parseInt(topLeftPoint.y-12);
         var xsizes = 24;
 
         if((mx >= xStart) && (my >= yStart)
                 && (mx <= (xStart + xsizes)) && (my <= (yStart + xsizes))){
-            ids.push(locations[i].dbId);
+            root.addTweetToList(locations[i].arrayIndex);
             res.push(i);
         }
     }
     if(res.length == 0){
-        infoBaloon.visible = false;
+        root.clearTweetList();
         return -1;
     }
-    root.requestPointInfo(ids);
     return res[0];
 }
 
-function showAllDots(){
-    for(var i in locations)
-        locations[i].visible = true;
+function addUntrackedTweet(number){
+    if(unlocatedTweets == -1){
+        toolBaloon.addElement("ToolText.qml", "title", {text: "Unlocalized tweets:"}, -1)
+        unlocatedTweets = toolBaloon.addElement("ToolButton.qml", "untracked", {text: number}, -1);
+        var bt = toolBaloon.getElement(unlocatedTweets);
+        bt.clicked.connect(function(){
+                               root.showUnlocatedTweets();
+                           });
+        return;
+    }
+    var btn = toolBaloon.getElement(unlocatedTweets);
+    btn.text = number;
 }
 
-function showOnlyDots(ids){
-    //nascondere tutti i punti tranne questi
-    for(var i in locations){
-        if(findInArray(locations[i].dbId, ids) != -1){
-            locations[i].visible = true;
-        } else {
-            locations[i].visible = false;
-        }
-    }
-}
-
-function findInArray(el, arr){
-    for(var i in arr){
-        if(arr[i] === el){
-            return i;
-        }
-    }
-    return -1;
-}
-
-function showPointInfo(info){
-    infoBaloon.visible = true;
-    infoBaloon.empty();
-    infoBaloon.addElement("ToolText.qml", "element", {text: qsTr("Found %1 Elements").arg(info["users"].length), "font.bold": true}, -1);
-    infoBaloon.addElement("ToolText.qml", "ht", {text: qsTr("Hashtags"), "font.bold": true}, -1);
-    var hashIdx = infoBaloon.addElement("ResultFlow.qml", "hash", {}, -1);
-    var hashFlow = infoBaloon.getElement(hashIdx);
-    for(var i in info.hashtags){
-        var idx = hashFlow.addElement("ToolButton.qml", "h"+i, {text: "#"+info.hashtags[i][1]+" N°:"+info.hashtags[i][0], value: info.hashtags[i][1], checkable: true}, -1);
-        var btn = hashFlow.getElement(idx);
-        if(findInArray(info.hashtags[i][1], selectedElements) != -1){
-            btn.clicked(info.hashtags[i][1]);
-        }
-        btn.clicked.connect(function(value){
-                                for(var j=0; j< hashFlow.length(); j++ ){
-                                    var x = hashFlow.getElement(j);
-                                    if(x.checked){
-                                        if(findInArray(x.value, selectedElements) == -1)
-                                            selectedElements.push(x.value);
-                                    }else{
-                                        var found = findInArray(x.value, selectedElements);
-                                        if(found != -1)
-                                            selectedElements.splice(found, 1);
-                                    }
-                                }
-                                root.hashClicked(selectedElements);
-                                if(selectedElements.length == 0)
-                                    showAllDots();
-                            });
-    }
-    infoBaloon.addElement("ToolText.qml", "lt", {text: qsTr("Links"), "font.bold": true}, -1);
-    var linkIdx = infoBaloon.addElement("ResultFlow.qml", "hash", {}, -1);
-    var linkFlow = infoBaloon.getElement(linkIdx);
-    for(var i in info.links){
-        var index = linkFlow.addElement("ToolButton.qml", "l"+i, {text: info.links[i][1], value: info.links[i][1]}, -1);
-        var btn = linkFlow.getElement(index);
-        btn.clicked.connect(function(value){ root.linkClicked(value); });
-    }
+function error(message){
+    toolBaloon.addElement("ToolText.qml", "error", {text: "<b color=red>Error:</b> "+message}, -1);
 }
