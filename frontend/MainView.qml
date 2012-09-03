@@ -39,6 +39,20 @@ View{
     signal linkClicked(string url)
     signal hashClicked(variant hash)
     signal addPage()
+    function refreshPointColor(location, selected){
+        if(selected){
+            if(UT.tracks[Tweets.getTweetAt(location.arrayIndex).userName] != null)
+                location.source = "images/map-dot-tracked-selected.png";
+            else{
+                location.source = "images/map-dot-selected.png";
+            }
+        }else{
+            if(UT.tracks[Tweets.getTweetAt(location.arrayIndex).userName] != null)
+                location.source = "images/map-dot-tracked.png";
+            else
+                location.source = "images/map-dot.png";
+        }
+    }
     function showError(message){
         UT.error(message);
     }
@@ -57,6 +71,7 @@ View{
                                             +"Coordinate{ latitude: "+ tweet.location.lat+";"
                                             +"longitude: "+tweet.location.lon+"; }", object, "coord");
             UT.tracks[tweet.userName].addCoordinate(coordinate);
+            refreshPointColor(object, false);
         }
         if (object == null) {
             console.log("Error creating object");
@@ -69,7 +84,7 @@ View{
             map.removeMapObject(UT.tracks[id]);
         }
         var object = Qt.createQmlObject("import QtQuick 1.1; import QtMobility.location 1.2;"
-                                           +"MapPolyline{ border.color: \"blue\"; border.width: 2; }",
+                                           +"MapPolyline{ border.color: \"#070785\"; border.width: 2; }",
                                            map, "route");
         map.addMapObject(object);
         UT.tracks[id] = object;
@@ -79,6 +94,7 @@ View{
         console.log("deleting "+id)
         map.removeMapObject(UT.tracks[id])
         UT.tracks[id] = null;
+        refreshAllPoints();
     }
     function isTracked(id){
         if(UT.tracks[id] != null){
@@ -106,6 +122,11 @@ View{
     function trackUsers(track){
         Tweets.trackingUsers = true;
         Tweets.refreshTracks();
+    }
+    function refreshAllPoints(){
+        for(var i in UT.locations){
+            refreshPointColor(UT.locations[i], false);
+        }
     }
 
     Component.onCompleted: {
@@ -148,10 +169,10 @@ View{
                 var selectedIcon = UT.selectMarkerIcon(mouse.x, mouse.y);
 
                 if(selectedIcon >= 0 && selectedIcon <  UT.locations.length){
-                    UT.locations[selectedIcon].source =  "images/map-dot-selected.png";
+                    refreshPointColor(UT.locations[selectedIcon], true);
                 }
                 if(UT.lastselected != -1){
-                    UT.locations[UT.lastselected].source = "images/map-dot.png";
+                    refreshPointColor(UT.locations[UT.lastselected], false);
                 }
 
                 UT.lastselected = selectedIcon;

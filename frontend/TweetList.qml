@@ -74,7 +74,7 @@ Item{
                         if(!visible){
                             if(!checked && defaultView.isTracked(userName)){
                                 shower.clicked("");
-                                clicked("");
+                                checked = true;
                             }
                         }
                     }

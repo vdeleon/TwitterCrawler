@@ -33,12 +33,16 @@ Item {
     onClicked: {
         if(checkable){
             checked = !checked;
-            if(checked)
-                buttonColor.color = "#fff";
-            else
-                buttonColor.color = "#000";
         }
     }
+    onCheckedChanged: {
+        if(checked)
+                buttonColor.color = "#fff";
+        else
+                buttonColor.color = "#000";
+
+    }
+
     Rectangle{
         id: buttonColor
         color: "#000"

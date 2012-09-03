@@ -60,6 +60,7 @@ PageStack{
                                             object.addCoordinate(coordinate);
                                         }
                                     }
+                                    defaultView.refreshAllPoints();
                                 });
         }
     }
