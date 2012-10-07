@@ -46,6 +46,8 @@ class DatabaseManager(object):
         self.db.commit()
 
     def addTweet(self, user_name, text, year, month, day, hour, minute, second):
+        if self.getTweet(user_name, text) != -1:
+            return -1
         self.cursor.execute("INSERT INTO tweets(user_name, text, year, month, day, hour, minute, second) VALUES(?,?,?,?,?,?,?,?)",
                             (user_name, text, year, month, day, hour, minute, second))
         return self.cursor.lastrowid
@@ -78,9 +80,22 @@ class DatabaseManager(object):
     def addLink(self, tweet_id, address):
         self.cursor.execute("INSERT INTO links(tweet, address) VALUES(?, ?)", (tweet_id, address))
         
+    def getTweet(self, user_name, text):
+        self.cursor.execute('SELECT id FROM tweets WHERE user_name = ? AND text = ?', (user_name, text))
+        res = self.cursor.fetchone()
+        if res == None:
+            return -1
+        return res[0]
+        
     def getUserTweets(self, userName):
         self.cursor.execute('SELECT id FROM tweets WHERE user_name = ? ORDER BY year, month, day, hour, minute, second DESC', (userName,))
         return self.cursor.fetchall()
+    
+    def dumpDb(self, output):
+        f = open(output, 'w')
+        for line in self.db.iterdump():
+            f.write('%s\n' % line)
+        f.close()
         
     def commit(self):
         self.db.commit()

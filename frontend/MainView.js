@@ -142,6 +142,10 @@ function showSearchInterface(type, word){
                                       });
         break;
     }
+    var saveSearch = toolBaloon.getElement(toolBaloon.addElement("ToolButton.qml", "save", {text:qsTr("Save results")}, -1));
+    saveSearch.clicked.connect(function(){
+                                   root.saveSearch();
+                               });
     newSearchIndex = toolBaloon.addElement("ToolButton.qml", "newSearch", {text: qsTr("New search")}, -1);
     var el = toolBaloon.getElement(newSearchIndex);
     el.clicked.connect(function(){

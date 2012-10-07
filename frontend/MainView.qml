@@ -31,6 +31,7 @@ View{
     property int historicalSearchDelay: 0
     property bool realtimeTrack: false
     signal stopSearch()
+    signal saveSearch();
     signal startRealtimeMapSearch(variant lat1, variant long1, variant lat2, variant long2)
     signal startRealtimeContentSearch(string content)
     signal startHistoricalMapSearch(variant lat1, variant long1, variant lat2, variant long2, int delta)

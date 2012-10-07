@@ -19,27 +19,6 @@ This file is part of TwitterCrawler.
 '''
 from PySide.QtCore import *
 
-class User(object):
-    def __init__(self, name=None, id=None):
-        self.name = name
-        self.id = id
-        self.db_id = None
-        self.followers = []
-        
-class Tweet(object):
-    def __init__(self, user=None, time=None, location=None, hashtags = [], links = []):
-        self.user = user
-        self.time = time
-        self.location = location
-        self.hashtags = hashtags
-        self.links = links
-        
-class SearchStep(object):
-    def __init__(self, users=[], tweets=[]):
-        QObject.__init__(self)
-        self.users = users
-        self.tweets = tweets
-
 class MyThread(QThread):
     def __init__(self, method, *args, **kwargs):
         QThread.__init__(self)
@@ -51,5 +30,3 @@ class MyThread(QThread):
     def run(self):
         self.method(*self.args, **self.kwargs)
         
-class SearchSignal(QObject):
-    dataReady = Signal(SearchStep)

@@ -25,11 +25,11 @@ from PySide.QtCore import *
 
 class RestCrawler(QObject, AbstractCrawler):
     
-    restDataReady = Signal(SearchStep)
+    restDataReady = Signal("QVariant")
     
     def __init__(self, auth=None, parent=None):
         QObject.__init__(self, parent)
-        AbstractCrawler.__init__(self, ["until", "page"])
+        AbstractCrawler.__init__(self, allowed_param=["until", "page"], enable_history=False)
         self.rest = rest(auth)
         self.known_locations = {}
         
@@ -86,8 +86,7 @@ class RestCrawler(QObject, AbstractCrawler):
             return (False, False)
     
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
-        if not self.checkParameters(**parameters):
-            return
+        AbstractCrawler.getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters)
         width = abs(lat2-lat1)
         height = abs(lon2-lon1)
         if lat1 < lat2:
@@ -105,26 +104,23 @@ class RestCrawler(QObject, AbstractCrawler):
             results = self.rest.search(geocode=string, include_entities=True, rpp=100, result_type="recent", **parameters)
             self.restDataReady.emit(self.generateSearchStep(results))
         except Exception as e:
-            '''sometimes tweepy fails'''
-            print e
+            raise e 
         
-    def getUserFollowers(self, user):
-        result = self.rest.followers(user.id)
-        sStep = SearchStep()
-        for res in result:
-            user.followers.append(User(name=user.screen_name, id=res.id))
-            sStep.users.append(user)
-        self.restDataReady.emit(sStep)
+#    def getUserFollowers(self, user):
+#        result = self.rest.followers(user.id)
+#        sStep = SearchStep()
+#        for res in result:
+#            user.followers.append(User(name=user.screen_name, id=res.id))
+#            sStep.users.append(user)
+#        self.restDataReady.emit(sStep)
         
     def getTweetsByContent(self, content, **parameters):
-        if not self.checkParameters(**parameters):
-            return
+        AbstractCrawler.getTweetsByContent(self, content, **parameters)
         results = self.rest.search(q=content, include_entities=True, rpp=100, **parameters)
         self.restDataReady.emit(self.generateSearchStep(results))
         
     def getTweetsByUser(self, username, **parameters):
-        if not self.checkParameters(**parameters):
-            return
+        AbstractCrawler.getTweetsByUser(self, username, **parameters)
         results = self.rest.user_timeline(screen_name=username, include_entities=True, **parameters)
         self.restDataReady.emit(self.generateSearchStep(results, True))
     

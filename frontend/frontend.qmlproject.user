@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by Qt Creator 2.4.1, 2012-09-01T15:23:50. -->
+<!-- Written by Qt Creator 2.4.1, 2012-09-18T19:14:48. -->
 <qtcreator>
  <data>
   <variable>ProjectExplorer.Project.ActiveTarget</variable>
@@ -125,7 +125,7 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">QmlProjectManager.QmlRunConfiguration</value>
     <value type="QString" key="QmlProjectManager.QmlRunConfiguration.MainScript">CurrentFile</value>
     <value type="QString" key="QmlProjectManager.QmlRunConfiguration.QDeclarativeViewerArguments"></value>
-    <value type="int" key="QmlProjectManager.QmlRunConfiguration.QtVersion">1</value>
+    <value type="int" key="QmlProjectManager.QmlRunConfiguration.QtVersion">5</value>
     <valuelist type="QVariantList" key="QmlProjectManager.QmlRunConfiguration.UserEnvironmentChanges"/>
     <value type="uint" key="RunConfiguration.QmlDebugServerPort">3768</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>

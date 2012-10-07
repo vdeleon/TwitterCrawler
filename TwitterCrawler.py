@@ -17,7 +17,6 @@ This file is part of TwitterCrawler.
     along with TwitterCrawler.  If not, see <http://www.gnu.org/licenses/>
     
 '''
-
 import sys, os.path, datetime
 from PySide.QtCore import *
 from PySide.QtGui import *
@@ -27,13 +26,13 @@ from backend.Base import *
 from threading import Timer
 
 from backend.Crawler import *
+from PySide import QtGui
 
 class Controller(Crawler):
     def __init__(self):
         Crawler.__init__(self)
         self.last_id = 0
         self._tweets = []
-        self.lastSearch = None
         self.resetTimer = Timer(500.0, self.restartLastSearch)
     
     def getAuthUrl(self):
@@ -61,6 +60,11 @@ class Controller(Crawler):
     @Slot()
     def stop(self):
         Crawler.stop(self)
+        
+    @Slot()
+    def saveSearch(self):
+        outputFile = QFileDialog.getSaveFileName(caption="Save File", filter="SQL files (*.sql)")
+        self.export(outputFile[0])
     
     @Slot(float, float, float, float)    
     def startRealtimeMapSearch(self, lat1, lon1, lat2, lon2):
@@ -68,7 +72,6 @@ class Controller(Crawler):
         
     @Slot(float, float, float, float, int)
     def startHistoricalMapSearch(self, lat1, lon1, lat2, lon2, delta, page=1):
-        self.lastSearch = {"type": "historicalMap", "lat1": lat1, "lon1": lon1, "lat2": lat2, "lon2": lon2, "delta": delta, "page": page}
         today = datetime.datetime.today().date()
         until = today - datetime.timedelta(days=delta)
         untilstr = until.strftime("%Y-%m-%d")
@@ -76,34 +79,25 @@ class Controller(Crawler):
     
     @Slot(str)
     def startRealtimeContentSearch(self, content):
-        self.lastSearch = {"type": "realtimeContent", "content": content}
         self.getTweetsByContent(content, crawler=STREAMING_CRAWLER)
     
     @Slot(str, int)    
     def startHistoricalContentSearch(self, content, delta, page=1):
-        self.lastSearch = {"type": "historicalContent", "content": content, "delta": delta, "page": page}
         today = datetime.datetime.today().date()
         until = today - datetime.timedelta(days=delta)
         untilstr = until.strftime("%Y-%m-%d")
         self.getTweetsByContent(content, crawler=REST_CRAWLER, until=untilstr, page=page)
         
     @Slot(str)
-    def startHistoricalUserSearch(self, username):
-        self.getTweetsByUser(username, crawler=REST_CRAWLER)
+    def startHistoricalUserSearch(self, username, page=1):
+        self.getTweetsByUser(username, crawler=REST_CRAWLER, page=page)
     
     @Slot()    
     def getMoreHistoricalResults(self):
-        if self.lastSearch["type"] == "historicalContent":
-            self.startHistoricalContentSearch(self.lastSearch["content"], 
-                                              self.lastSearch["delta"], 
-                                              self.lastSearch["page"]+1)
-        elif self.lastSearch["type"] == "historicalMap":
-            self.startHistoricalMapSearch(self.lastSearch["lat1"],
-                                          self.lastSearch["lon1"], 
-                                          self.lastSearch["lat2"],
-                                          self.lastSearch["lon2"], 
-                                          self.lastSearch["delta"], 
-                                          self.lastSearch["page"]+1)
+        fun, args, kwargs = self.cron.getLast()
+        print kwargs
+        kwargs["page"] = kwargs["page"] + 1
+        fun( *args, **kwargs)
         
     @Slot(int)
     def errorHandler(self, code):
@@ -114,12 +108,7 @@ class Controller(Crawler):
             return
         
     def restartLastSearch(self):
-        if self.lastSearch == None:
-            return
-        if self.lastSearch["type"] == "realtimeContent":
-            self.startRealtimeContentSearch(self.lastSearch["content"])
-        elif self.lastSearch["type"] == "historicalContent":
-            self.startHistoricalContentSearch(self.lastSearch["content"], self.lastSearch["delta"])
+        self.cron.repeatLast()
     
     def getTweets(self):
         tweets = self._tweets

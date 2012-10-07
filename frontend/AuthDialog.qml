@@ -20,56 +20,30 @@ This file is part of TwitterCrawler.
 
 import QtQuick 1.1
 import QtWebKit 1.0
-import QtDesktop 0.1
 
 View{
     id: authDialog
     property string url: "about://blank"
     signal codeRecived(string auth)
-    ScrollArea{
-        id: webFlick
-        width: parent.width
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.left: parent.left
-        anchors.bottom: btns.top
-        contentHeight: webView.height
-        clip: true
-        WebView{
-            id: webView
-            width: webFlick.width-15
-            //preferredHeight: parent.height
-            url: authDialog.url
-        }
+    WebView{
+        id: webView
+        anchors.fill: parent
+        //preferredHeight: parent.height
+        url: authDialog.url
     }
-    Rectangle{
-        id: btns
-        anchors.bottom: parent.bottom
+    ToolBaloon{
+        id: tools
         anchors.right: parent.right
-        anchors.left: parent.left
-        height: 100
-        Row{
-            anchors.centerIn: parent
-            Label{
-                height: authCode.height
-                verticalAlignment: Text.AlignVCenter
-                font.pointSize: 12
-                text: qsTr("Insert PIN here: ")
-            }
-            TextField{
-                id: authCode
-            }
-        }
-        Button{
-            id: authButton
-            anchors.bottom: parent.bottom
-            anchors.left: parent.right
-            anchors.bottomMargin: 10
-            anchors.leftMargin: -10-authButton.width
-            text: qsTr("Accept")
-            onClicked: {
-                authDialog.codeRecived(authCode.text);
-            }
+        anchors.top: parent.top
+        anchors.rightMargin: 5
+        anchors.topMargin: 5
+        Component.onCompleted: {
+            tools.addElement("ToolText.qml", "title", {text: qsTr("Insert PIN here")}, -1);
+            var code = tools.getElement(tools.addElement("ToolInput.qml", "input", {}, -1));
+            var btn = tools.getElement(tools.addElement("ToolButton.qml", "btn", {text: qsTr("Access")}, -1));
+            btn.clicked.connect(function(){
+                                    authDialog.codeRecived(code.text);
+                                });
         }
     }
 }

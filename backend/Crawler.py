@@ -32,7 +32,7 @@ STREAMING_CRAWLER = 2
 class Crawler(QObject, AbstractCrawler):
     def __init__(self):
         QObject.__init__(self)
-        AbstractCrawler.__init__(self)
+        AbstractCrawler.__init__(self, enable_history=True)
         self.settings = QSettings("RFCode", "TwitterCrawler")
         self.db = DatabaseManager()
         self.rest = None
@@ -82,42 +82,52 @@ class Crawler(QObject, AbstractCrawler):
     
     @Slot("QVariant")
     def updateSearchStep(self, step):
-        for tweet in step:
-            dbId = self.db.addTweet(tweet["userName"], 
-                                    tweet["tweet"], 
-                                    tweet["year"], 
-                                    tweet["month"], 
-                                    tweet["day"], 
-                                    tweet["hour"], 
-                                    tweet["minute"], 
-                                    tweet["second"])
-            for h in tweet["hashtags"]:
-                self.db.addHashtag(dbId, h)
-            for l in tweet["links"]:
-                self.db.addLink(dbId, l)
-            if tweet["location"] != False:
-                self.db.addLocation(dbId, tweet["location"]["lat"], tweet["location"]["lon"])
-            tweet["dbId"] = dbId
+        for i in range(len(step)-1, -1, -1):
+            dbId = self.db.addTweet(step[i]["userName"], 
+                                    step[i]["tweet"], 
+                                    step[i]["year"], 
+                                    step[i]["month"], 
+                                    step[i]["day"], 
+                                    step[i]["hour"], 
+                                    step[i]["minute"], 
+                                    step[i]["second"])
+            step[i]["dbId"] = dbId
+            if dbId == -1:
+                print "duplicated"
+                step.pop(i)
+            else:
+                for h in step[i]["hashtags"]:
+                    self.db.addHashtag(dbId, h)
+                for l in step[i]["links"]:
+                    self.db.addLink(dbId, l)
+                if step[i]["location"] != False:
+                    self.db.addLocation(dbId, step[i]["location"]["lat"], step[i]["location"]["lon"])
         self.db.commit()
     
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
         '''Get tweets inside the given bounding box'''
+        AbstractCrawler.getTweetsInsideArea(self, lat1, lon1, lat2, lon2, crawler=crawler, **parameters)
         if (crawler&REST_CRAWLER) == REST_CRAWLER:
             self.threadPool.append(MyThread(self.rest.getTweetsInsideArea, lat1, lon1, lat2, lon2, **parameters))
         if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
             self.streaming.getTweetsInsideArea(lat1, lon1, lat2, lon2, **parameters)
         
     def getTweetsByContent(self, content, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
+        AbstractCrawler.getTweetsByContent(self, content, crawler=crawler, **parameters)
         if (crawler&REST_CRAWLER) == REST_CRAWLER:
             self.threadPool.append(MyThread(self.rest.getTweetsByContent, content, **parameters))
         if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
             self.streaming.getTweetsByContent(content)
             
     def getTweetsByUser(self, username, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
+        AbstractCrawler.getTweetsByUser(self, username, crawler=crawler, **parameters)
         if(crawler&REST_CRAWLER) == REST_CRAWLER:
             self.threadPool.append(MyThread(self.rest.getTweetsByUser, username, **parameters))
         if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
             self.streaming.getTweetsByUser(username, **parameters)
+            
+    def export(self, output):
+        self.db.dumpDb(output)
 
     def stop(self):
         self.streaming.stop()

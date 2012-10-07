@@ -87,6 +87,11 @@ PageStack{
         onStopSearch: {
             controller.stop()
         }
+
+        onSaveSearch: {
+            controller.saveSearch();
+        }
+
         onLinkClicked: {
             browserView.url = url;
             rootPage.push(browserView);

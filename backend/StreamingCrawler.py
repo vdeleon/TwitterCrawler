@@ -82,8 +82,7 @@ class Listener(QObject, streaming.StreamListener):
         
 class StreamingCrawler(AbstractCrawler):
     def __init__(self, auth, headers={}):
-        AbstractCrawler.__init__(self)
-        self.signal = SearchSignal()
+        AbstractCrawler.__init__(self, allowed_param=[], enable_history=False)
         self.threadPool = []
         if auth == None:
             raise ValueError("auth is not valid!")
@@ -91,13 +90,11 @@ class StreamingCrawler(AbstractCrawler):
         self.stream = SecureStream(auth, self.listener, headers=headers, retry_count=10)
         
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
-        if not self.checkParameters(**parameters):
-            return
+        AbstractCrawler.getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters)
         self.threadPool.append(MyThread(self.stream.filter, locations=(lon1, lat2, lon2, lat1)))
         
     def getTweetsByContent(self, content, **parameters):
-        if not self.checkParameters(**parameters):
-            return
+        AbstractCrawler.getTweetsByContent(self, content, **parameters)
         self.threadPool.append(MyThread(self.stream.filter, track=[content]))
             
     def stop(self):
