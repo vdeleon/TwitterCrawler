@@ -26,6 +26,7 @@ from backend.Base import *
 from threading import Timer
 
 from backend.Crawler import *
+from backend.AbstractCrawler import HistoryException
 from PySide import QtGui
 
 class Controller(Crawler):
@@ -90,12 +91,16 @@ class Controller(Crawler):
         
     @Slot(str)
     def startHistoricalUserSearch(self, username, page=1):
-        self.getTweetsByUser(username, crawler=REST_CRAWLER, page=page)
+        try:
+            fun, args, kwargs = self.cron.getLast("getTweetsByUser", username)
+            kwargs["page"] = kwargs["page"] + 1
+            return fun(*args, **kwargs)
+        except HistoryException:
+            return self.getTweetsByUser(username, crawler=REST_CRAWLER, page=page)
     
     @Slot()    
     def getMoreHistoricalResults(self):
         fun, args, kwargs = self.cron.getLast()
-        print kwargs
         kwargs["page"] = kwargs["page"] + 1
         fun( *args, **kwargs)
         

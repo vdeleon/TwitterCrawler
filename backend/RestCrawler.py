@@ -36,6 +36,7 @@ class RestCrawler(QObject, AbstractCrawler):
     def generateSearchStep(self, results, user=False):
         step = []
         for res in results:
+            print res.__dict__
             step.append({"year": res.created_at.year,
                          "month": res.created_at.month,
                          "day": res.created_at.day,

@@ -62,7 +62,7 @@ Item{
                     checkable: true
                     visible: shower.checked
                     width: parent.width+4
-                    text: "Draw user Track"
+                    text: qsTr("Draw user Track")
                     onCheckedChanged: {
                         if(checked){
                             rootPage.getUserTweets(userName);
@@ -82,7 +82,7 @@ Item{
                 ToolButton{
                     visible: shower.checked
                     width: parent.width+4
-                    text: "Follow user's movements"
+                    text: qsTr("Get more Tweets")
                     onClicked: {
                         rootPage.startHistoricalUserSearch(userName)
                     }

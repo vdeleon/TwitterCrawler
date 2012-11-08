@@ -7,28 +7,36 @@ Created on 26/giu/2012
 class ArgumentException(Exception):
     def __init__(self, message):
         self.message = "Argument Error: %s", (message,)
+        
+class HistoryException(Exception):
+    def __init__(self, name):
+        self.message = "History error: %s not found" % (name,)
 
 class History(object):
     def __init__(self):
         self.actions = []
         
-    def __search(self, name):
-        for i in range(len(self.actions), -1, -1):
-            if self.actions[i][0] == name:
+    def __search(self, name, *args):
+        for i in range(len(self.actions)-1, -1, -1):
+            if self.actions[i][0].__name__ == name:
+                for a in args:
+                    if a not in self.actions[i][1]:
+                        print "arg not found"
+                        raise HistoryException(name)
                 return i
-        raise Exception("Hystory error: %s not found" % (name,))
+        raise HistoryException(name)
         
     def add(self, action):
         self.actions.append(action)
         
-    def repeatLast(self, name=""):
-        fun, args, kwargs = self.getLast(name)
+    def repeatLast(self, name="", *args):
+        fun, args, kwargs = self.getLast(name, *args)
         return fun(*args, **kwargs)
     
-    def getLast(self, name=""):
+    def getLast(self, name="", *args):
         last = -1
         if name != "":
-            last = self.__search(name)
+            last = self.__search(name, *args)
         return self.actions[last]
         
 class AbstractCrawler(object):
