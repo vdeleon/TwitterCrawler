@@ -21,6 +21,10 @@ import sqlite3, datetime
 from queries import *
 
 class DatabaseManager(object):
+    
+    db = None
+    cursor = None
+    
     def __init__(self):
         self.db = sqlite3.connect(":memory:")
         #self.db = sqlite3.connect("/home/riccardo/TwitterCrawlerdebug.db")

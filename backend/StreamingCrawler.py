@@ -81,28 +81,26 @@ class Listener(QObject, streaming.StreamListener):
         self.streamingError.emit(status_code)
         
 class StreamingCrawler(AbstractCrawler):
+    
+    listener = Listener()
+    """
+    @type: Listener
+    """
+    
     def __init__(self, auth, headers={}):
         AbstractCrawler.__init__(self, allowed_param=[], enable_history=False)
-        self.threadPool = []
         if auth == None:
             raise ValueError("auth is not valid!")
-        self.listener = Listener()
         self.stream = SecureStream(auth, self.listener, headers=headers, retry_count=10)
         
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
         AbstractCrawler.getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters)
-        self.threadPool.append(MyThread(self.stream.filter, locations=(lon1, lat2, lon2, lat1)))
+        self.stream.filter(locations=(lon1, lat2, lon2, lat1))
         
     def getTweetsByContent(self, content, **parameters):
         AbstractCrawler.getTweetsByContent(self, content, **parameters)
-        self.threadPool.append(MyThread(self.stream.filter, track=[content]))
+        self.stream.filter(track=[content])
             
     def stop(self):
-        removable = []
         self.stream.disconnect()
-        for i in range(len(self.threadPool)):
-            if not self.threadPool[i].isRunning():
-                removable.append(i)
-        for i in removable:
-            self.threadPool.pop(i)
             

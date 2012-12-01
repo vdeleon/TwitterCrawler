@@ -53,13 +53,16 @@ class RestCrawler(QObject, AbstractCrawler):
             else:
                 step[-1]["userId"] = res.from_user_id
                 step[-1]["userName"] = res.from_user
-            if res.geo == None:
-                try:
-                    (tlat, tlong) = self.getPlaceCoordinates(res.location)
-                except AttributeError as e:
-                    (tlat, tlong) = (False, False)
-            else:
-                (tlat, tlong) = res.geo["coordinates"]
+            try:
+                (tlat, tlong) = res.coordinates["coordinates"]
+            except:
+                try: 
+                    (tlat, tlong) = res.geo["coordinates"]
+                except:
+                    try:
+                        (tlat, tlong) = self.getPlaceCoordinates(res.location)
+                    except:
+                        (tlat, tlong) = (False, False)
             if tlat != False:
                 step[-1]["location"] = {"lat":tlat, "lon":tlong}
             for u in res.entities["urls"]:
@@ -83,7 +86,7 @@ class RestCrawler(QObject, AbstractCrawler):
                 coordinates = results["result"]["places"][0]["bounding_box"]["coordinates"][0][0]
             self.known_locations[name] = (coordinates[1], coordinates[0])
             return (coordinates[1], coordinates[0])
-        except TweepError as e:
+        except:
             return (False, False)
     
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
@@ -106,14 +109,6 @@ class RestCrawler(QObject, AbstractCrawler):
             self.restDataReady.emit(self.generateSearchStep(results))
         except Exception as e:
             raise e 
-        
-#    def getUserFollowers(self, user):
-#        result = self.rest.followers(user.id)
-#        sStep = SearchStep()
-#        for res in result:
-#            user.followers.append(User(name=user.screen_name, id=res.id))
-#            sStep.users.append(user)
-#        self.restDataReady.emit(sStep)
         
     def getTweetsByContent(self, content, **parameters):
         AbstractCrawler.getTweetsByContent(self, content, **parameters)

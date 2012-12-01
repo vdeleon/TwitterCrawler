@@ -1,3 +1,4 @@
+
 '''
 Copyright (C) 2012 Riccardo Ferrazzo <f.riccardo87@gmail.com>
 
@@ -26,19 +27,41 @@ import tweepy
 CONSUMER_KEY = "JmaTtQcCQUjz9YzTfB3FbQ"
 CONSUMER_SECRET = "9dqYHe7P1R22UqbhzukpX5WUGZwYOVCM9OkgUsQMpUI"
 
-REST_CRAWLER = 1
-STREAMING_CRAWLER = 2
+REST_CRAWLER = 0x01
+STREAMING_CRAWLER = 0x02
 
 class Crawler(QObject, AbstractCrawler):
+    
+    db = None
+    """
+    @type: DatabaseManager
+    """
+    
+    rest= None
+    """
+    @type: RestCrawler
+    """
+    
+    streaming = None
+    """
+    @type: StreamingCrawler
+    """
+    
+    auth = None
+    """
+    @type: OAuthHandler
+    """
+    
+    threadPool = []
+    """
+    @type: Array
+    """
+    
     def __init__(self):
         QObject.__init__(self)
         AbstractCrawler.__init__(self, enable_history=True)
         self.settings = QSettings("RFCode", "TwitterCrawler")
         self.db = DatabaseManager()
-        self.rest = None
-        self.streaming = None
-        self.auth = None
-        self.threadPool = []
         
     def authInit(self):
         self.rest = RestCrawler(self.auth)
@@ -110,25 +133,31 @@ class Crawler(QObject, AbstractCrawler):
         if (crawler&REST_CRAWLER) == REST_CRAWLER:
             self.threadPool.append(MyThread(self.rest.getTweetsInsideArea, lat1, lon1, lat2, lon2, **parameters))
         if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
-            self.streaming.getTweetsInsideArea(lat1, lon1, lat2, lon2, **parameters)
+            self.threadPool.append(MyThread(self.streaming.getTweetsInsideArea,lat1, lon1, lat2, lon2, **parameters))
         
     def getTweetsByContent(self, content, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
         AbstractCrawler.getTweetsByContent(self, content, crawler=crawler, **parameters)
         if (crawler&REST_CRAWLER) == REST_CRAWLER:
             self.threadPool.append(MyThread(self.rest.getTweetsByContent, content, **parameters))
         if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
-            self.streaming.getTweetsByContent(content)
+            self.threadPool.append(MyThread(self.streaming.getTweetsByContent, content))
             
     def getTweetsByUser(self, username, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
         AbstractCrawler.getTweetsByUser(self, username, crawler=crawler, **parameters)
         if(crawler&REST_CRAWLER) == REST_CRAWLER:
             self.threadPool.append(MyThread(self.rest.getTweetsByUser, username, **parameters))
         if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
-            self.streaming.getTweetsByUser(username, **parameters)
+            self.threadPool.append(MyThread(self.streaming.getTweetsByUser, username, **parameters))
             
     def export(self, output):
         self.db.dumpDb(output)
 
     def stop(self):
+        removable = []
         self.streaming.stop()
+        for i in range(len(self.threadPool)):
+            if not self.threadPool[i].isRunning():
+                removable.append(i)
+        for i in removable:
+            self.threadPool.pop(i)
         self.db.commit()

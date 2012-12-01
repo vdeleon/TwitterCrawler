@@ -52,55 +52,21 @@ function newSearch(){
     unlocatedTweets = -1;
     var radio = toolBaloon.addElement("SearchMenu.qml", "search", {}, -1);
     var el = toolBaloon.getElement(radio);
+    searchGroup = toolBaloon.addGroup();
+    var group = toolBaloon.getElement(searchGroup);
+    displayContentSearch(group, el);
     el.searchContentChanged.connect(function(value){
                                         if(searchGroup != -1){
                                             toolBaloon.deleteGroup(searchGroup);
                                         }
                                         searchGroup = toolBaloon.addGroup();
-                                        var group = toolBaloon.getElement(searchGroup);
+                                        group = toolBaloon.getElement(searchGroup);
                                         switch(value){
                                         case 1:
-                                            var selectArea = toolBaloon.addElement("ToolButton.qml", "mapBlock", {text: qsTr("Select area"), checkable: true}, searchGroup);
-                                            group[selectArea].clicked.connect(function(){
-                                                                                  root.mapEnabled = !group[selectArea].checked;
-                                                                              });
-                                            var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: qsTr("Start search")}, searchGroup);
-                                            group[startSearch].clicked.connect(function(){
-                                                                                   if(group[selectArea].checked)
-                                                                                        group[selectArea].clicked("");
-                                                                                   switch(el.searchType){
-                                                                                   case 1:
-                                                                                       root.startHistoricalMapSearch(selectedRegion.topLeft.latitude,
-                                                                                                                     selectedRegion.topLeft.longitude,
-                                                                                                                     selectedRegion.bottomRight.latitude,
-                                                                                                                     selectedRegion.bottomRight.longitude, root.historicalSearchDelay);
-                                                                                       showSearchInterface("rest", "")
-                                                                                       break;
-                                                                                   case 2:
-                                                                                       root.startRealtimeMapSearch(selectedRegion.topLeft.latitude,
-                                                                                                           selectedRegion.topLeft.longitude,
-                                                                                                           selectedRegion.bottomRight.latitude,
-                                                                                                           selectedRegion.bottomRight.longitude);
-                                                                                       showSearchInterface("streaming", "")
-                                                                                       break;
-                                                                                   }
-                                                                               });
+                                            displayMapSearch(group, el);
                                             break;
                                         case 2:
-                                            var txt = toolBaloon.addElement("ToolInput.qml", "txt", {}, searchGroup);
-                                            var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: qsTr("Start search")}, searchGroup);
-                                            group[startSearch].clicked.connect(function(){
-                                                                                   switch(el.searchType){
-                                                                                   case 1:
-                                                                                       root.startHistoricalContentSearch(group[txt].text, root.historicalSearchDelay);
-                                                                                       showSearchInterface("rest", group[txt].text);
-                                                                                       break;
-                                                                                   case 2:
-                                                                                       root.startRealtimeContentSearch(group[txt].text);
-                                                                                       showSearchInterface("streaming", group[txt].text);
-                                                                                       break;
-                                                                                   }
-                                                                               });
+                                            displayContentSearch(group, el);
                                             break;
                                         }
                                     });
@@ -114,6 +80,51 @@ function newSearch(){
                                          break;
                                      }
                                  });
+}
+
+function displayMapSearch(group, el){
+    var selectArea = toolBaloon.addElement("ToolButton.qml", "mapBlock", {text: qsTr("Select area"), checkable: true}, searchGroup);
+    group[selectArea].clicked.connect(function(){
+                                          root.mapEnabled = !group[selectArea].checked;
+                                      });
+    var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: qsTr("Start search")}, searchGroup);
+    group[startSearch].clicked.connect(function(){
+                                           if(group[selectArea].checked)
+                                                group[selectArea].clicked("");
+                                           switch(el.searchType){
+                                           case 1:
+                                               root.startHistoricalMapSearch(selectedRegion.topLeft.latitude,
+                                                                             selectedRegion.topLeft.longitude,
+                                                                             selectedRegion.bottomRight.latitude,
+                                                                             selectedRegion.bottomRight.longitude, root.historicalSearchDelay);
+                                               showSearchInterface("rest", "")
+                                               break;
+                                           case 2:
+                                               root.startRealtimeMapSearch(selectedRegion.topLeft.latitude,
+                                                                   selectedRegion.topLeft.longitude,
+                                                                   selectedRegion.bottomRight.latitude,
+                                                                   selectedRegion.bottomRight.longitude);
+                                               showSearchInterface("streaming", "")
+                                               break;
+                                           }
+                                       });
+}
+
+function displayContentSearch(group, el){
+    var txt = toolBaloon.addElement("ToolInput.qml", "txt", {}, searchGroup);
+    var startSearch = toolBaloon.addElement("ToolButton.qml", "ssearch", {text: qsTr("Start search")}, searchGroup);
+    group[startSearch].clicked.connect(function(){
+                                           switch(el.searchType){
+                                           case 1:
+                                               root.startHistoricalContentSearch(group[txt].text, root.historicalSearchDelay);
+                                               showSearchInterface("rest", group[txt].text);
+                                               break;
+                                           case 2:
+                                               root.startRealtimeContentSearch(group[txt].text);
+                                               showSearchInterface("streaming", group[txt].text);
+                                               break;
+                                           }
+                                       });
 }
 
 function showSearchInterface(type, word){

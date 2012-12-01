@@ -13,8 +13,8 @@ class HistoryException(Exception):
         self.message = "History error: %s not found" % (name,)
 
 class History(object):
-    def __init__(self):
-        self.actions = []
+    
+    actions = []
         
     def __search(self, name, *args):
         for i in range(len(self.actions)-1, -1, -1):
@@ -43,9 +43,20 @@ class AbstractCrawler(object):
     '''
     Abstract crawler structure
     '''
+    cron = None
+    """
+    @var cron: action's history
+    @type: History
+    """
+    
+    allowed_param = []
+    """
+    @var allowed_param: list of allowed parameters
+    @type: array
+    """
+    
     def __init__(self, allowed_param=[], enable_history=True):
         self.allowed_param=allowed_param
-        self.cron = None
         if enable_history:
             self.cron = History()
         
@@ -59,19 +70,19 @@ class AbstractCrawler(object):
             self.cron.add([function, args, parameters])
     
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
-        '''
+        """
         Get every tweet from a given location
-        '''
+        """
         self.__crawlAction(self.getTweetsInsideArea, lat1, lon1, lat2, lon2, **parameters)
     
     def getTweetsByContent(self, content, **parameters):
-        '''
+        """
         Get tweets that contains a given content
-        '''
+        """
         self.__crawlAction(self.getTweetsByContent, content, **parameters)
     
     def getTweetsByUser(self, username, **parameters):
-        '''
+        """
         Get tweets from a given user timeline
-        '''
+        """
         self.__crawlAction(self.getTweetsByUser, username, **parameters)
