@@ -29,6 +29,7 @@ class DatabaseManager(object):
         self.db = sqlite3.connect(":memory:")
         #self.db = sqlite3.connect("/home/riccardo/TwitterCrawlerdebug.db")
         self.db.row_factory = sqlite3.Row
+        self.db.text_factory = lambda x: unicode(x, 'utf-8', 'ignore')
         self.cursor = self.db.cursor()
         self.createDbStructure()
         
@@ -80,9 +81,17 @@ class DatabaseManager(object):
     
     def addHashtag(self, tweet_id, tag):
         self.cursor.execute("INSERT INTO hashtags(tweet, tag) VALUES(?, ?)", (tweet_id, tag))
+        
+    def getHashtag(self, tweet_id):
+        self.cursor.execute("SELECT tag FROM hashtags WHERE tweet = ?", (tweet_id,))
+        return self.cursor.fetchall()
     
     def addLink(self, tweet_id, address):
         self.cursor.execute("INSERT INTO links(tweet, address) VALUES(?, ?)", (tweet_id, address))
+        
+    def getLink(self, tweet_id):
+        self.cursor.execute("SELECT address FROM links WHERE tweet = ?", (tweet_id,))
+        return self.cursor.fetchall()
         
     def getTweet(self, user_name, text):
         self.cursor.execute('SELECT id FROM tweets WHERE user_name = ? AND text = ?', (user_name, text))
@@ -90,6 +99,10 @@ class DatabaseManager(object):
         if res == None:
             return -1
         return res[0]
+    
+    def getUserTweetsComplete(self, userName):
+        self.cursor.execute('SELECT * FROM tweets WHERE user_name = ? ORDER BY year, month, day, hour, minute, second DESC', (userName,))
+        return self.cursor.fetchall()
         
     def getUserTweets(self, userName):
         self.cursor.execute('SELECT id FROM tweets WHERE user_name = ? ORDER BY year, month, day, hour, minute, second DESC', (userName,))
@@ -100,6 +113,17 @@ class DatabaseManager(object):
         for line in self.db.iterdump():
             f.write('%s\n' % line)
         f.close()
+        
+    def exportQueryAsCSV(self, query, output):
+        self.cursor.execute(query)
+        res = self.cursor.fetchall()
+        if len(res) < 1:
+            return
+        fd = open(output, 'w')
+        fd.write(",".join(res[0].keys()))
+        for line in res:
+            ",".join(line.values())
+        fd.close()
         
     def commit(self):
         self.db.commit()

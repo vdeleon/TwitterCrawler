@@ -62,10 +62,24 @@ class Controller(Crawler):
     def stop(self):
         Crawler.stop(self)
         
-    @Slot()
-    def saveSearch(self):
-        outputFile = QFileDialog.getSaveFileName(caption="Save File", filter="SQL files (*.sql)")
-        self.export(outputFile[0])
+    @Slot("QVariant")
+    def saveSearch(self, ids):
+        outputFile = QFileDialog.getSaveFileName(caption="Save File")
+        if outputFile == '':
+            return
+        if ids != 0:
+            fd = open(outputFile[0], "w")
+            for name in ids:
+                tweets = self.db.getUserTweetsComplete(name)
+                fd.write("%s,lat,lon\n" % (",".join(tweets[0].keys())))
+                for tweet in tweets:
+                    coordinates = self.db.getIdLocation(tweet["id"])
+                    converter = (type(w).__name__ == 'str' and '"'+w+'"' or str(w) for w in tweet)
+                    fd.write(",".join(converter))
+                    fd.write(",%s,%s\n" % (coordinates["lat"], coordinates["lon"]))
+            fd.close()
+        else:
+            self.export(outputFile[0])
     
     @Slot(float, float, float, float)    
     def startRealtimeMapSearch(self, lat1, lon1, lat2, lon2):

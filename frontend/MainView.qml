@@ -40,6 +40,10 @@ View{
     signal linkClicked(string url)
     signal hashClicked(variant hash)
     signal addPage()
+    function getTrackedUsers(){
+        return Object.keys(UT.tracks)
+    }
+
     function refreshPointColor(location, selected){
         if(selected){
             if(UT.tracks[Tweets.getTweetAt(location.arrayIndex).userName] != null)
@@ -99,7 +103,6 @@ View{
     }
     function isTracked(id){
         if(UT.tracks[id] != null){
-            console.log("isTracked returned true for "+id);
             return true;
         }
         return false;

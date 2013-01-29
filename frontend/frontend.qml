@@ -89,7 +89,7 @@ PageStack{
         }
 
         onSaveSearch: {
-            controller.saveSearch();
+            rootPage.push(saveView)
         }
 
         onLinkClicked: {
@@ -110,11 +110,8 @@ PageStack{
         }
     }
 
-    BrowserView{
-        id: browserView
-        onBack: {
-            rootPage.pop();
-        }
+    SaveView{
+        id: saveView
     }
 
     Component.onCompleted: {

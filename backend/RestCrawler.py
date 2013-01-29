@@ -36,7 +36,6 @@ class RestCrawler(QObject, AbstractCrawler):
     def generateSearchStep(self, results, user=False):
         step = []
         for res in results:
-            print res.__dict__
             step.append({"year": res.created_at.year,
                          "month": res.created_at.month,
                          "day": res.created_at.day,
@@ -54,10 +53,10 @@ class RestCrawler(QObject, AbstractCrawler):
                 step[-1]["userId"] = res.from_user_id
                 step[-1]["userName"] = res.from_user
             try:
-                (tlat, tlong) = res.coordinates["coordinates"]
+                (tlong, tlat) = res.coordinates["coordinates"]
             except:
                 try: 
-                    (tlat, tlong) = res.geo["coordinates"]
+                    (tlong, tlat) = res.geo["coordinates"]
                 except:
                     try:
                         (tlat, tlong) = self.getPlaceCoordinates(res.location)
