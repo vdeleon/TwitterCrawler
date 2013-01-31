@@ -74,7 +74,7 @@ class Controller(Crawler):
                 fd.write("%s,lat,lon\n" % (",".join(tweets[0].keys())))
                 for tweet in tweets:
                     coordinates = self.db.getIdLocation(tweet["id"])
-                    converter = (type(w).__name__ == 'str' and '"'+w+'"' or str(w) for w in tweet)
+                    converter = (type(w).__name__ in ['str', 'unicode'] and u'"'+w+u'"' or unicode(w) for w in tweet)
                     fd.write(",".join(converter))
                     fd.write(",%s,%s\n" % (coordinates["lat"], coordinates["lon"]))
             fd.close()
