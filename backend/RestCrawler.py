@@ -29,7 +29,7 @@ class RestCrawler(QObject, AbstractCrawler):
     
     def __init__(self, auth=None, parent=None):
         QObject.__init__(self, parent)
-        AbstractCrawler.__init__(self, allowed_param=["until", "page"], enable_history=False)
+        AbstractCrawler.__init__(self, allowed_param=["until", "max_id"], enable_history=False)
         self.rest = rest(auth)
         self.known_locations = {}
         
@@ -46,7 +46,7 @@ class RestCrawler(QObject, AbstractCrawler):
                          "tweet": res.text,
                          "hashtags": [],
                          "links": []})
-            if user:
+            if res.user:
                 step[-1]["userId"] = res.user.id
                 step[-1]["userName"] = res.user.screen_name
             else:
@@ -89,7 +89,7 @@ class RestCrawler(QObject, AbstractCrawler):
             return (False, False)
     
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
-        AbstractCrawler.getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters)
+        idx = AbstractCrawler.getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters)
         width = abs(lat2-lat1)
         height = abs(lon2-lon1)
         if lat1 < lat2:
@@ -105,17 +105,20 @@ class RestCrawler(QObject, AbstractCrawler):
         string = "%f,%f,%fmi" % (latc, longc, radius)
         try:
             results = self.rest.search(geocode=string, include_entities=True, rpp=100, result_type="recent", **parameters)
+            self.setMaxId(idx, results[-1].id)
             self.restDataReady.emit(self.generateSearchStep(results))
         except Exception as e:
             raise e 
         
     def getTweetsByContent(self, content, **parameters):
-        AbstractCrawler.getTweetsByContent(self, content, **parameters)
+        idx = AbstractCrawler.getTweetsByContent(self, content, **parameters)
         results = self.rest.search(q=content, include_entities=True, rpp=100, **parameters)
+        self.setMaxId(idx, results[-1].id)
         self.restDataReady.emit(self.generateSearchStep(results))
         
     def getTweetsByUser(self, username, **parameters):
-        AbstractCrawler.getTweetsByUser(self, username, **parameters)
+        idx = AbstractCrawler.getTweetsByUser(self, username, **parameters)
         results = self.rest.user_timeline(screen_name=username, include_entities=True, **parameters)
+        self.setMaxId(idx, results[-1].id)
         self.restDataReady.emit(self.generateSearchStep(results, True))
     

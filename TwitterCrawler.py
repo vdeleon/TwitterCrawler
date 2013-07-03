@@ -86,36 +86,36 @@ class Controller(Crawler):
         self.getTweetsInsideArea(lat1, lon1, lat2, lon2, crawler=STREAMING_CRAWLER)
         
     @Slot(float, float, float, float, int)
-    def startHistoricalMapSearch(self, lat1, lon1, lat2, lon2, delta, page=1):
+    def startHistoricalMapSearch(self, lat1, lon1, lat2, lon2, delta, max_id=-1):
         today = datetime.datetime.today().date()
         until = today - datetime.timedelta(days=delta)
         untilstr = until.strftime("%Y-%m-%d")
-        self.getTweetsInsideArea(lat1, lon1, lat2, lon2, crawler=REST_CRAWLER, until=untilstr, page=page)
+        self.getTweetsInsideArea(lat1, lon1, lat2, lon2, crawler=REST_CRAWLER, until=untilstr, max_id=max_id)
     
     @Slot(str)
     def startRealtimeContentSearch(self, content):
         self.getTweetsByContent(content, crawler=STREAMING_CRAWLER)
     
     @Slot(str, int)    
-    def startHistoricalContentSearch(self, content, delta, page=1):
+    def startHistoricalContentSearch(self, content, delta, max_id=-1):
         today = datetime.datetime.today().date()
         until = today - datetime.timedelta(days=delta)
         untilstr = until.strftime("%Y-%m-%d")
-        self.getTweetsByContent(content, crawler=REST_CRAWLER, until=untilstr, page=page)
+        self.getTweetsByContent(content, crawler=REST_CRAWLER, until=untilstr, max_id=max_id)
         
     @Slot(str)
-    def startHistoricalUserSearch(self, username, page=1):
+    def startHistoricalUserSearch(self, username, max_id=-1):
         try:
             fun, args, kwargs = self.cron.getLast("getTweetsByUser", username)
-            kwargs["page"] = kwargs["page"] + 1
+            kwargs["max_id"] = kwargs["max_id"] + 1
             return fun(*args, **kwargs)
         except HistoryException:
-            return self.getTweetsByUser(username, crawler=REST_CRAWLER, page=page)
+            return self.getTweetsByUser(username, crawler=REST_CRAWLER, max_id=max_id)
     
     @Slot()    
     def getMoreHistoricalResults(self):
         fun, args, kwargs = self.cron.getLast()
-        kwargs["page"] = kwargs["page"] + 1
+        kwargs["max_id"] = kwargs["max_id"] + 1
         fun( *args, **kwargs)
         
     @Slot(int)

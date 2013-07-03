@@ -28,6 +28,7 @@ class History(object):
         
     def add(self, action):
         self.actions.append(action)
+        return len(self.actions)-1
         
     def repeatLast(self, name="", *args):
         fun, args, kwargs = self.getLast(name, *args)
@@ -67,22 +68,27 @@ class AbstractCrawler(object):
                 if k not in self.allowed_param:
                     raise ArgumentException("wrong parameter on crawling function")
         if self.cron != None:
-            self.cron.add([function, args, parameters])
+            return self.cron.add([function, args, parameters])
+            
+    def setMaxId(self, index, max_id):
+        if self.cron == None:
+            return
+        self.cron.actions[index][2]["max_id"] = max_id
     
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
         """
         Get every tweet from a given location
         """
-        self.__crawlAction(self.getTweetsInsideArea, lat1, lon1, lat2, lon2, **parameters)
+        return self.__crawlAction(self.getTweetsInsideArea, lat1, lon1, lat2, lon2, **parameters)
     
     def getTweetsByContent(self, content, **parameters):
         """
         Get tweets that contains a given content
         """
-        self.__crawlAction(self.getTweetsByContent, content, **parameters)
+        return self.__crawlAction(self.getTweetsByContent, content, **parameters)
     
     def getTweetsByUser(self, username, **parameters):
         """
         Get tweets from a given user timeline
         """
-        self.__crawlAction(self.getTweetsByUser, username, **parameters)
+        return self.__crawlAction(self.getTweetsByUser, username, **parameters)
