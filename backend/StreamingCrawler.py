@@ -21,7 +21,7 @@ import tweepy.streaming as streaming
 import datetime
 from PySide.QtCore import *
 from Base import *
-from AbstractCrawler import AbstractCrawler
+from AbstractCrawler import *
 
 class SecureStream(streaming.Stream):
     def __init__(self, auth, listener, **options):
@@ -88,17 +88,17 @@ class StreamingCrawler(AbstractCrawler):
     """
     
     def __init__(self, auth, headers={}):
-        AbstractCrawler.__init__(self, allowed_param=[], enable_history=False)
+        AbstractCrawler.__init__(self)
         if auth == None:
             raise ValueError("auth is not valid!")
         self.stream = SecureStream(auth, self.listener, headers=headers, retry_count=10)
         
+    @AbstractCrawler.crawlingAction
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
-        AbstractCrawler.getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters)
         self.stream.filter(locations=(lon1, lat2, lon2, lat1))
-        
+
+    @AbstractCrawler.crawlingAction        
     def getTweetsByContent(self, content, **parameters):
-        AbstractCrawler.getTweetsByContent(self, content, **parameters)
         self.stream.filter(track=[content])
             
     def stop(self):

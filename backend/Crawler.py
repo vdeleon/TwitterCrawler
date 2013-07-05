@@ -21,7 +21,9 @@ This file is part of TwitterCrawler.
 from RestCrawler import *
 from StreamingCrawler import *
 from PySide.QtCore import *
+from AbstractCrawler import *
 from Database import DatabaseManager
+
 import tweepy
 
 CONSUMER_KEY = "JmaTtQcCQUjz9YzTfB3FbQ"
@@ -59,9 +61,10 @@ class Crawler(QObject, AbstractCrawler):
     
     def __init__(self):
         QObject.__init__(self)
-        AbstractCrawler.__init__(self, enable_history=True)
+        AbstractCrawler.__init__(self)
         self.settings = QSettings("RFCode", "TwitterCrawler")
         self.db = DatabaseManager()
+        self.max_id = 0
         
     def authInit(self):
         self.rest = RestCrawler(self.auth)
@@ -125,25 +128,30 @@ class Crawler(QObject, AbstractCrawler):
                     self.db.addLink(dbId, l)
                 if step[i]["location"] != False:
                     self.db.addLocation(dbId, step[i]["location"]["lat"], step[i]["location"]["lon"])
+            if step[i]["id"] != None and self.max_id < step[i]["id"]:
+                self.max_id = step[i]["id"]
         self.db.commit()
     
+    @AbstractCrawler.crawlingAction
+    @AbstractCrawler.traceHistory
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
         '''Get tweets inside the given bounding box'''
-        AbstractCrawler.getTweetsInsideArea(self, lat1, lon1, lat2, lon2, crawler=crawler, **parameters)
         if (crawler&REST_CRAWLER) == REST_CRAWLER:
             self.threadPool.append(MyThread(self.rest.getTweetsInsideArea, lat1, lon1, lat2, lon2, **parameters))
         if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
             self.threadPool.append(MyThread(self.streaming.getTweetsInsideArea,lat1, lon1, lat2, lon2, **parameters))
-        
+            
+    @AbstractCrawler.crawlingAction
+    @AbstractCrawler.traceHistory        
     def getTweetsByContent(self, content, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
-        AbstractCrawler.getTweetsByContent(self, content, crawler=crawler, **parameters)
         if (crawler&REST_CRAWLER) == REST_CRAWLER:
             self.threadPool.append(MyThread(self.rest.getTweetsByContent, content, **parameters))
         if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
             self.threadPool.append(MyThread(self.streaming.getTweetsByContent, content))
-            
+
+    @AbstractCrawler.crawlingAction
+    @AbstractCrawler.traceHistory
     def getTweetsByUser(self, username, crawler=REST_CRAWLER|STREAMING_CRAWLER, **parameters):
-        AbstractCrawler.getTweetsByUser(self, username, crawler=crawler, **parameters)
         if(crawler&REST_CRAWLER) == REST_CRAWLER:
             self.threadPool.append(MyThread(self.rest.getTweetsByUser, username, **parameters))
         if (crawler&STREAMING_CRAWLER) == STREAMING_CRAWLER:
@@ -153,6 +161,7 @@ class Crawler(QObject, AbstractCrawler):
         self.db.dumpDb(output)
 
     def stop(self):
+        self.max_id = 0
         removable = []
         self.streaming.stop()
         for i in range(len(self.threadPool)):

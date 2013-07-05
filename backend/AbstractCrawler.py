@@ -41,54 +41,44 @@ class History(object):
         return self.actions[last]
         
 class AbstractCrawler(object):
-    '''
-    Abstract crawler structure
-    '''
-    cron = None
-    """
-    @var cron: action's history
-    @type: History
-    """
     
-    allowed_param = []
-    """
-    @var allowed_param: list of allowed parameters
-    @type: array
-    """
-    
-    def __init__(self, allowed_param=[], enable_history=True):
+    def __init__(self, allowed_param=[]):
         self.allowed_param=allowed_param
-        if enable_history:
-            self.cron = History()
+        self.cron = History()
+          
+    @classmethod
+    def traceHistory(klass, fun):
+        def _traceHistory(*args, **kwargs):
+            args[0].cron.add([fun, args, kwargs])
+            fun(*args, **kwargs)
+        return _traceHistory
+               
+    @classmethod
+    def crawlingAction(klass, fun):
+        def _crawlingAction(self, *args, **kwargs):
+            keys = kwargs.keys()
+            if self.allowed_param != []:
+                for k in keys:
+                    if k not in self.allowed_param:
+                        raise ArgumentException("wrong parameter on crawling function")
+            #function
+            fun(self, *args, **kwargs)
+        return _crawlingAction
         
-    def __crawlAction(self, function, *args, **parameters):
-        keys = parameters.keys()
-        if self.allowed_param != []:
-            for k in keys:
-                if k not in self.allowed_param:
-                    raise ArgumentException("wrong parameter on crawling function")
-        if self.cron != None:
-            return self.cron.add([function, args, parameters])
-            
-    def setMaxId(self, index, max_id):
-        if self.cron == None:
-            return
-        self.cron.actions[index][2]["max_id"] = max_id
-    
     def getTweetsInsideArea(self, lat1, lon1, lat2, lon2, **parameters):
         """
         Get every tweet from a given location
         """
-        return self.__crawlAction(self.getTweetsInsideArea, lat1, lon1, lat2, lon2, **parameters)
+        raise NotImplementedError()
     
     def getTweetsByContent(self, content, **parameters):
         """
         Get tweets that contains a given content
         """
-        return self.__crawlAction(self.getTweetsByContent, content, **parameters)
+        raise NotImplementedError()
     
     def getTweetsByUser(self, username, **parameters):
         """
         Get tweets from a given user timeline
         """
-        return self.__crawlAction(self.getTweetsByUser, username, **parameters)
+        raise NotImplementedError()

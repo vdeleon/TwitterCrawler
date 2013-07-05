@@ -107,7 +107,7 @@ class Controller(Crawler):
     def startHistoricalUserSearch(self, username, max_id=-1):
         try:
             fun, args, kwargs = self.cron.getLast("getTweetsByUser", username)
-            kwargs["max_id"] = kwargs["max_id"] + 1
+            kwargs["max_id"] = self.max_id + 1
             return fun(*args, **kwargs)
         except HistoryException:
             return self.getTweetsByUser(username, crawler=REST_CRAWLER, max_id=max_id)
@@ -115,8 +115,9 @@ class Controller(Crawler):
     @Slot()    
     def getMoreHistoricalResults(self):
         fun, args, kwargs = self.cron.getLast()
-        kwargs["max_id"] = kwargs["max_id"] + 1
-        fun( *args, **kwargs)
+        kwargs["max_id"] = self.max_id+1
+        print args, kwargs
+        fun(*args, **kwargs)
         
     @Slot(int)
     def errorHandler(self, code):
